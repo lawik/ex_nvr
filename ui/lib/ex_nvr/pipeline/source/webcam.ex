@@ -38,11 +38,9 @@ defmodule ExNVR.Pipeline.Source.Webcam do
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
     {width, height} = options.resolution
+    options = %{options | framerate: String.to_integer(options.framerate)}
 
-    device = options.device
-    device = "/dev/video0"
-
-    case CameraCapture.open_camera(device, options.framerate, width, height) do
+    case CameraCapture.open_camera(options.device, options.framerate, width, height) do
       {:ok, native} ->
         state = %{
           native: native,

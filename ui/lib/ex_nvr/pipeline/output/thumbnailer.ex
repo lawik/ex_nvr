@@ -54,6 +54,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
       })
 
     Process.set_label(:thumbnailer)
+    Membrane.Logger.info("Thumbnail started, writing to #{state.dest}")
 
     {[], state}
   end
@@ -92,15 +93,12 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
     pid = self()
 
     img_path = image_path(state.dest, buffer)
-    Membrane.Logger.info("Decoding started: #{state.dest}")
-    Membrane.Logger.info("img path: #{img_path}")
 
     spawn(fn ->
       state =
         with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
              jpeg_image <- VideoProcessor.encode_to_jpeg(decoded),
              :ok <- File.write(img_path, jpeg_image) do
-          Membrane.Logger.info("Decoded image written...")
           %{state | last_buffer_pts: buffer.pts}
         else
           error ->
@@ -116,7 +114,6 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
 
   @impl true
   def handle_info({:decoded, _state}, _ctx, state) do
-    Membrane.Logger.info("Decoding done.")
     {[], %{state | decoding?: false}}
   end
 

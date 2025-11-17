@@ -398,8 +398,7 @@ defmodule ExNVR.Pipelines.Main do
     [
       child(:source, %Source.Webcam{
         device: device.url,
-        # framerate: device.stream_config.framerate,
-        framerate: 24,
+        framerate: device.stream_config.framerate,
         resolution: {String.to_integer(width), String.to_integer(height)}
       })
     ]
@@ -507,7 +506,7 @@ defmodule ExNVR.Pipelines.Main do
       get_child(:tee)
       |> via_out(:push_output)
       |> child({:thumbnailer, :main_stream}, %Output.Thumbnailer{
-        dest: "/tmp/jpegs"
+        dest: Device.thumbnails_dir(state.device)
       })
     ]
   end
