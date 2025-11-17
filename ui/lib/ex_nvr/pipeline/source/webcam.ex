@@ -11,32 +11,38 @@ defmodule ExNVR.Pipeline.Source.Webcam do
   @dest_time_base 90_000
   # @original_time_base Membrane.Time.seconds(1)
 
-  def_output_pad :main_stream_output,
+  def_output_pad(:main_stream_output,
     accepted_format: %H264{alignment: :au},
     availability: :on_request,
     flow_control: :push
+  )
 
-  def_options device: [
-                spec: String.t(),
-                default: "default",
-                description: "Name of the device used to capture video"
-              ],
-              framerate: [
-                spec: non_neg_integer(),
-                default: 8,
-                description: "Framerate of device's output video stream"
-              ],
-              resolution: [
-                spec: {integer(), integer()},
-                default: nil,
-                description: "Width and height(wxh)"
-              ]
+  def_options(
+    device: [
+      spec: String.t(),
+      default: "default",
+      description: "Name of the device used to capture video"
+    ],
+    framerate: [
+      spec: non_neg_integer(),
+      default: 8,
+      description: "Framerate of device's output video stream"
+    ],
+    resolution: [
+      spec: {integer(), integer()},
+      default: nil,
+      description: "Width and height(wxh)"
+    ]
+  )
 
   @impl true
   def handle_init(_ctx, %__MODULE__{} = options) do
     {width, height} = options.resolution
 
-    case CameraCapture.open_camera(options.device, options.framerate, width, height) do
+    device = options.device
+    device = "/dev/video0"
+
+    case CameraCapture.open_camera(device, options.framerate, width, height) do
       {:ok, native} ->
         state = %{
           native: native,

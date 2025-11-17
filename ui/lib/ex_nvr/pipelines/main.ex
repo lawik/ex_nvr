@@ -140,7 +140,7 @@ defmodule ExNVR.Pipelines.Main do
         child(:hls_sink, %Output.HLS{
           location: Path.join(Utils.hls_dir(device.id), "live")
         })
-      ] ++ build_device_spec(device)
+      ] ++ build_device_spec(device, state)
 
     {:ok, pid} = StorageMonitor.start_link(device: device)
     state = %{state | storage_monitor: pid}
@@ -388,23 +388,34 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
-  defp build_device_spec(%{type: :file} = device) do
+  defp build_device_spec(%{type: :file} = device, state) do
     [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
 
-  defp build_device_spec(%{type: :webcam} = device) do
+  defp build_device_spec(%{type: :webcam} = device, state) do
     [width, height] = String.split(device.stream_config.resolution, "x")
 
     [
       child(:source, %Source.Webcam{
         device: device.url,
-        framerate: device.stream_config.framerate,
+        # framerate: device.stream_config.framerate,
+        framerate: 24,
         resolution: {String.to_integer(width), String.to_integer(height)}
       })
     ]
+
+    # [
+    #   child(:source, %Membrane.CameraCapture{
+    #     # device: device.url,
+    #     device: "/dev/video1",
+    #     framerate: device.stream_config.framerate
+    #   })
+    #   |> child(%Membrane.FFmpeg.SWScale.PixelFormatConverter{format: :I420})
+    #   |> child(:tee, Membrane.Tee)
+    # ] ++ build_main_stream_spec(state)
   end
 
-  defp build_device_spec(%{type: :ip} = device) do
+  defp build_device_spec(%{type: :ip} = device, state) do
     [child(:rtsp_source, %Source.RTSP{device: device})]
   end
 
@@ -427,7 +438,7 @@ defmodule ExNVR.Pipelines.Main do
         |> via_out(:push_output)
         |> via_in(:video)
         |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
-      ]
+      ] ++ build_main_thumb_spec(state)
   end
 
   defp build_sub_stream_spec(%{device: device} = state) do
@@ -488,6 +499,16 @@ defmodule ExNVR.Pipelines.Main do
       |> via_out(:push_output)
       |> via_in(:video)
       |> child({:webrtc, :sub_stream}, %Output.WebRTC{ice_servers: state.ice_servers})
+    ]
+  end
+
+  defp build_main_thumb_spec(state) do
+    [
+      get_child(:tee)
+      |> via_out(:push_output)
+      |> child({:thumbnailer, :main_stream}, %Output.Thumbnailer{
+        dest: "/tmp/jpegs"
+      })
     ]
   end
 

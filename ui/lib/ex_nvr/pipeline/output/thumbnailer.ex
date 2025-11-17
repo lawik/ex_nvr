@@ -13,30 +13,33 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   alias ExNVR.AV.{Decoder, VideoProcessor}
   alias Membrane.{Buffer, H264, H265}
 
-  def_input_pad :input,
+  def_input_pad(:input,
     accepted_format:
       any_of(
         %H264{alignment: :au},
         %H265{alignment: :au}
       )
+  )
 
-  def_options interval: [
-                spec: integer(),
-                default: 10,
-                description: """
-                The rate of thumbnails generation.
-                Defaults to one thumbnail per 10 seconds.
-                """
-              ],
-              thumbnail_width: [
-                spec: non_neg_integer(),
-                default: 320,
-                description: "The width of the generated thumbnail"
-              ],
-              dest: [
-                spec: Path.t(),
-                description: "The destination folder where the thumbnails will be stored"
-              ]
+  def_options(
+    interval: [
+      spec: integer(),
+      default: 10,
+      description: """
+      The rate of thumbnails generation.
+      Defaults to one thumbnail per 10 seconds.
+      """
+    ],
+    thumbnail_width: [
+      spec: non_neg_integer(),
+      default: 320,
+      description: "The width of the generated thumbnail"
+    ],
+    dest: [
+      spec: Path.t(),
+      description: "The destination folder where the thumbnails will be stored"
+    ]
+  )
 
   @impl true
   def handle_init(_ctx, options) do
@@ -46,7 +49,8 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
       |> Map.merge(%{
         thumbnail_height: nil,
         decoder: nil,
-        last_buffer_pts: nil
+        last_buffer_pts: nil,
+        decoding?: false
       })
 
     Process.set_label(:thumbnailer)
@@ -64,7 +68,7 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
       out_height = div(state.thumbnail_width * format.height, format.width)
       out_height = out_height - rem(out_height, 2)
 
-      decoder = Decoder.new(codec, out_height: out_height, out_width: state.thumbnail_width)
+      decoder = Decoder.new(codec, out_height: format.height, out_width: format.width)
 
       {[], %{state | thumbnail_height: out_height, decoder: decoder}}
     else
@@ -73,28 +77,47 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
   end
 
   @impl true
-  def handle_buffer(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
+  # def handle_buffer(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
+  def handle_buffer(:input, buffer, ctx, state) when not state.decoding? do
     last_pts = state.last_buffer_pts || Buffer.get_dts_or_pts(buffer)
     interval = Membrane.Time.as_seconds(Buffer.get_dts_or_pts(buffer) - last_pts, :round)
 
-    if is_nil(state.last_buffer_pts) or interval >= state.interval,
-      do: do_decode(buffer, state),
-      else: {[], state}
+    do_decode(buffer, state)
   end
 
   @impl true
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
   defp do_decode(buffer, state) do
-    with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
-         jpeg_image <- VideoProcessor.encode_to_jpeg(decoded),
-         :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
-      {[], %{state | last_buffer_pts: buffer.pts}}
-    else
-      error ->
-        Membrane.Logger.error("Failed to generate thumbnail: #{inspect(error)}")
-        {[], state}
-    end
+    pid = self()
+
+    img_path = image_path(state.dest, buffer)
+    Membrane.Logger.info("Decoding started: #{state.dest}")
+    Membrane.Logger.info("img path: #{img_path}")
+
+    spawn(fn ->
+      state =
+        with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
+             jpeg_image <- VideoProcessor.encode_to_jpeg(decoded),
+             :ok <- File.write(img_path, jpeg_image) do
+          Membrane.Logger.info("Decoded image written...")
+          %{state | last_buffer_pts: buffer.pts}
+        else
+          error ->
+            Membrane.Logger.error("Failed to generate thumbnail: #{inspect(error)}")
+            state
+        end
+
+      send(pid, {:decoded, state})
+    end)
+
+    {[], %{state | decoding?: true}}
+  end
+
+  @impl true
+  def handle_info({:decoded, _state}, _ctx, state) do
+    Membrane.Logger.info("Decoding done.")
+    {[], %{state | decoding?: false}}
   end
 
   defp image_path(dest_folder, buffer) do
