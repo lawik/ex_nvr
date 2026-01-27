@@ -58,6 +58,17 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
 config :exqlite, force_build: true
 
+config :homex,
+  broker: [host: "192.168.2.223", port: 1883, username: "nerves", password: "ofsteel"],
+  device: [
+    name: "ExNVR",
+    manufacturer: "Evercam",
+    model: "dev"
+  ],
+  entities: [
+    ExNVR.HomeAssistant.Camera
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

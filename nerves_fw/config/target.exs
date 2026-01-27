@@ -157,21 +157,23 @@ config :mdns_lite,
     }
   ]
 
-config :nerves_hub_link,
-  connect: true,
-  host: URI.parse(System.fetch_env!("NERVES_HUB_DEVICES_URI")).host,
-  remote_iex: true,
-  shared_secret: [
-    product_key: System.get_env("NERVES_HUB_PRODUCT_KEY", "fake_key"),
-    product_secret: System.get_env("NERVES_HUB_PRODUCT_SECRET", "fake_secret")
-  ],
-  health: [
-    metadata: %{
-      "Router Mac Address" => {ExNVR.Nerves.Health.Metadata, :router_mac_address, []},
-      "Router Serial Number" => {ExNVR.Nerves.Health.Metadata, :router_serial_number, []},
-      "Kit ID" => {Nerves.Runtime.KV, :get, ["nerves_evercam_id"]}
-    }
-  ]
+if System.get_env("NERVES_HUB_DEVICES_URI") do
+  config :nerves_hub_link,
+    connect: true,
+    host: URI.parse(System.fetch_env!("NERVES_HUB_DEVICES_URI")).host,
+    remote_iex: true,
+    shared_secret: [
+      product_key: System.get_env("NERVES_HUB_PRODUCT_KEY", "fake_key"),
+      product_secret: System.get_env("NERVES_HUB_PRODUCT_SECRET", "fake_secret")
+    ],
+    health: [
+      metadata: %{
+        "Router Mac Address" => {ExNVR.Nerves.Health.Metadata, :router_mac_address, []},
+        "Router Serial Number" => {ExNVR.Nerves.Health.Metadata, :router_serial_number, []},
+        "Kit ID" => {Nerves.Runtime.KV, :get, ["nerves_evercam_id"]}
+      }
+    ]
+end
 
 config :nerves_time, :servers, [
   "time1.google.com",
@@ -197,6 +199,17 @@ config :sentry,
   context_lines: 5,
   environment_name: config_env(),
   enable_source_code_context: true
+
+config :homex,
+  broker: [host: "192.168.2.223", port: 1883, username: "nerves", password: "ofsteel"],
+  device: [
+    name: "ExNVR",
+    manufacturer: "Evercam",
+    model: "dev"
+  ],
+  entities: [
+    ExNVR.HomeAssistant.Camera
+  ]
 
 # Loki config
 if System.get_env("LOKI_URL") do

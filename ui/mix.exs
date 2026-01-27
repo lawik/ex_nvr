@@ -93,7 +93,9 @@ defmodule ExNVR.MixProject do
       {:mimic, "~> 2.1", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test},
-      {:lazy_html, "~> 0.1.0", only: :test}
+      {:lazy_html, "~> 0.1.0", only: :test},
+      {:homex, github: "kevinschweikert/homex", branch: "feature/camera"},
+      {:cowlib, "2.13.0", [env: :prod, hex: "cowlib", override: true, repo: "hexpm"]}
     ]
   end
 

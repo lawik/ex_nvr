@@ -99,6 +99,11 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
         with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
              jpeg_image <- VideoProcessor.encode_to_jpeg(decoded),
              :ok <- File.write(img_path, jpeg_image) do
+          send(
+            Process.whereis(ExNVR.HomeAssistant.Camera),
+            {:thumbnail, %{path: img_path, width: decoded.width, height: decoded.height}}
+          )
+
           %{state | last_buffer_pts: buffer.pts}
         else
           error ->
