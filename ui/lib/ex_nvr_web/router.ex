@@ -115,6 +115,7 @@ defmodule ExNVRWeb.Router do
         {ExNVRWeb.Navigation, :set_current_path}
       ] do
       live "/dashboard", DashboardLive, :new
+      live "/grid", GridLive, :new
 
       live "/devices", DeviceListLive, :list
       live "/devices/:id/details", DeviceDetailsLive, :show

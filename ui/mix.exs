@@ -85,15 +85,27 @@ defmodule ExNVR.MixProject do
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 11.0"},
-      {:live_debugger, "~> 0.3.0", only: [:dev, :test]},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},
-      {:membrane_h26x_plugin, "~> 0.10", only: :test},
-      {:mimic, "~> 2.1", only: :test},
-      {:faker, "~> 0.17", only: :test},
-      {:bypass, "~> 2.1", only: :test},
-      {:lazy_html, "~> 0.1.0", only: :test}
-    ]
+      {:yolo, "~> 0.2.0"},
+      # I'm using EXLA as Nx backend
+      # Nx is mostly used for pre/post processing
+      {:exla, "~> 0.10"}
+    ] ++
+      if(:os.type() == {:unix, :darwin},
+        do: [{:emlx, github: "elixir-nx/emlx", branch: "main"}],
+        else: []
+      ) ++
+      [
+        # evision for image processing (you can use :image instead)
+        # {:evision, "~> 0.2.0"},
+        {:live_debugger, "~> 0.3.0", only: [:dev, :test]},
+        {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+        {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},
+        {:membrane_h26x_plugin, "~> 0.10", only: :test},
+        {:mimic, "~> 2.1", only: :test},
+        {:faker, "~> 0.17", only: :test},
+        {:bypass, "~> 2.1", only: :test},
+        {:lazy_html, "~> 0.1.0", only: :test}
+      ]
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

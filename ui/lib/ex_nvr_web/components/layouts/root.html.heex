@@ -22,6 +22,23 @@
       <link phx-track-static rel="stylesheet" href={static_path(@conn, "/assets/app.css")} />
       <script defer phx-track-static type="module" src={static_path(@conn, "/assets/app.js")} />
     </LiveVue.Reload.vite_assets>
+    <style>
+      /* Animated dashed border via SVG */
+      .dash-animate rect {
+        animation: borderDash 0.8s linear infinite;
+        stroke-dasharray: 8 4;
+      }
+      @keyframes borderDash {
+        0% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: -24; }
+      }
+      /* Scanline gradient */
+      .scanline-cyan { background: linear-gradient(to bottom, transparent, #00f0ff33, transparent); }
+      .scanline-magenta { background: linear-gradient(to bottom, transparent, #ff00e433, transparent); }
+      .scanline-lime { background: linear-gradient(to bottom, transparent, #39ff1433, transparent); }
+      .scanline-amber { background: linear-gradient(to bottom, transparent, #ffae0033, transparent); }
+      .scanline-red { background: linear-gradient(to bottom, transparent, #ff204033, transparent); }
+    </style>
   </head>
   <body class="main-body bg-gray-300 dark:bg-gray-800 antialiased">
     {@inner_content}
