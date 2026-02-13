@@ -133,6 +133,7 @@ defmodule ExNVRWeb.Components.Sidebar do
       [
         [
           %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
+          %{label: "Grid", icon: "hero-border-all", href: ~p"/grid"},
           %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
           %{
             label: "Events",
@@ -196,6 +197,7 @@ defmodule ExNVRWeb.Components.Sidebar do
       [
         [
           %{label: "Dashboard", icon: "hero-tv-solid", href: ~p"/dashboard"},
+          %{label: "Grid", icon: "hero-qr-code", href: ~p"/grid"},
           %{label: "Recordings", icon: "hero-film-solid", href: ~p"/recordings"},
           %{
             label: "Events",
