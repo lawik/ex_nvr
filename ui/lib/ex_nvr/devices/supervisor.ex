@@ -41,6 +41,22 @@ defmodule ExNVR.Devices.Supervisor do
         _other -> children
       end
 
+    children =
+      case Application.get_env(:ex_nvr, :object_detector) do
+        nil ->
+          children
+
+        detector_config ->
+          detector_opts = [
+            device_id: device.id,
+            model_path: Keyword.fetch!(detector_config, :model_path),
+            classes_path: Keyword.get(detector_config, :classes_path),
+            prob_threshold: Keyword.get(detector_config, :prob_threshold, 0.25)
+          ]
+
+          children ++ [{ExNVR.AI.ObjectDetector, detector_opts}]
+      end
+
     Supervisor.init(children, strategy: :rest_for_one, max_restarts: 10_000)
   end
 

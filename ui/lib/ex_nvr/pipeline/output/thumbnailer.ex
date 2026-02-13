@@ -36,6 +36,11 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
               dest: [
                 spec: Path.t(),
                 description: "The destination folder where the thumbnails will be stored"
+              ],
+              device_id: [
+                spec: binary() | nil,
+                default: nil,
+                description: "Device ID used for broadcasting thumbnails via PubSub"
               ]
 
   @impl true
@@ -89,6 +94,14 @@ defmodule ExNVR.Pipeline.Output.Thumbnailer do
     with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
          jpeg_image <- VideoProcessor.encode_to_jpeg(decoded),
          :ok <- File.write(image_path(state.dest, buffer), jpeg_image) do
+      if state.device_id do
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "thumbnails:#{state.device_id}",
+          {:thumbnail, jpeg_image}
+        )
+      end
+
       {[], %{state | last_buffer_pts: buffer.pts}}
     else
       error ->
