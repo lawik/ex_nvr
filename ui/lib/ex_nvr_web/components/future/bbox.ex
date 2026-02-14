@@ -15,13 +15,26 @@ defmodule ExNVRWeb.Components.Future.Bbox do
 
   use Phoenix.Component
 
+  attr(:label, :string, required: true)
+  attr(:confidence, :string, default: "")
+  attr(:style, :string, required: true)
+  attr(:info, :string, default: nil)
+
+  def variants(%{label: "person"} = assigns) do
+    cyan(assigns)
+  end
+
+  def variants(%{label: _} = assigns) do
+    lime(assigns)
+  end
+
   @doc """
   Cyan bounding box — dashed animated SVG border, pulsing corner brackets, crosshair center.
   """
-  attr :label, :string, required: true
-  attr :confidence, :string, default: ""
-  attr :style, :string, required: true
-  attr :info, :string, default: nil
+  attr(:label, :string, required: true)
+  attr(:confidence, :string, default: "")
+  attr(:style, :string, required: true)
+  attr(:info, :string, default: nil)
 
   def cyan(assigns) do
     ~H"""
@@ -71,10 +84,10 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   @doc """
   Magenta bounding box — double border, thick L-shape corners, mid-edge ticks.
   """
-  attr :label, :string, required: true
-  attr :confidence, :string, default: ""
-  attr :style, :string, required: true
-  attr :info, :string, default: nil
+  attr(:label, :string, required: true)
+  attr(:confidence, :string, default: "")
+  attr(:style, :string, required: true)
+  attr(:info, :string, default: nil)
 
   def magenta(assigns) do
     ~H"""
@@ -114,10 +127,10 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   @doc """
   Lime bounding box — glitching border, dotted inner border, corner diamonds, center reticle.
   """
-  attr :label, :string, required: true
-  attr :confidence, :string, default: ""
-  attr :style, :string, required: true
-  attr :info, :string, default: nil
+  attr(:label, :string, required: true)
+  attr(:confidence, :string, default: "")
+  attr(:style, :string, required: true)
+  attr(:info, :string, default: nil)
 
   def lime(assigns) do
     ~H"""
@@ -163,10 +176,10 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   @doc """
   Amber bounding box — thick outer border, filled corner blocks, warning stripes.
   """
-  attr :label, :string, required: true
-  attr :confidence, :string, default: ""
-  attr :style, :string, required: true
-  attr :info, :string, default: nil
+  attr(:label, :string, required: true)
+  attr(:confidence, :string, default: "")
+  attr(:style, :string, required: true)
+  attr(:info, :string, default: nil)
 
   def amber(assigns) do
     ~H"""
@@ -204,10 +217,10 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   @doc """
   Red bounding box — triple border, aggressive glitching, thick glowing corners, crosshair with dot.
   """
-  attr :label, :string, required: true
-  attr :confidence, :string, default: ""
-  attr :style, :string, required: true
-  attr :info, :string, default: nil
+  attr(:label, :string, required: true)
+  attr(:confidence, :string, default: "")
+  attr(:style, :string, required: true)
+  attr(:info, :string, default: nil)
 
   def red(assigns) do
     ~H"""
@@ -252,10 +265,10 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   @doc """
   Minimal cyan bounding box — corners only, scanline, monospace label.
   """
-  attr :label, :string, required: true
-  attr :confidence, :string, default: ""
-  attr :style, :string, required: true
-  attr :info, :string, default: nil
+  attr(:label, :string, required: true)
+  attr(:confidence, :string, default: "")
+  attr(:style, :string, required: true)
+  attr(:info, :string, default: nil)
 
   def minimal(assigns) do
     ~H"""
