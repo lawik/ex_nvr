@@ -1,12 +1,9 @@
 defmodule ExNVRWeb.GridLive do
   use ExNVRWeb, :live_view
 
-  alias Ecto.Changeset
   alias ExNVR.Devices
-  alias ExNVR.Model.Device
   alias ExNVR.Recordings
   alias ExNVRWeb.Components.Future.Bbox
-  alias ExNVRWeb.Router.Helpers, as: Routes
 
   def render(assigns) do
     ~H"""
@@ -23,6 +20,8 @@ defmodule ExNVRWeb.GridLive do
         <div class="text-sm font-mono text-black">
             <span :if={fps = @fps[device.id]}>Framepicker: {fps} fps</span>
             <span :if={dfps = @detector_fps[device.id]}>Detector: {dfps} fps</span>
+            <span :if={inf = @inference_time[device.id]}>Inference: {inf} ms</span>
+            <span :if={lat = @latency[device.id]}>Latency: {lat} ms</span>
         </div>
         <div :if={detections = @detections[device.id]} class="">
             <div>{inspect(@size[device.id])}</div>
@@ -39,19 +38,7 @@ defmodule ExNVRWeb.GridLive do
     """
   end
 
-  defp box_class(%{class: class}) do
-    case class do
-      "person" -> "border border-green-500 rounded-sm bg-green-500 opacity-50"
-      "blue" -> "border border-sky-500 rounded-sm bg-sky-500 opacity-50"
-      _ -> "border border-purple-500 rounded-sm bg-purple-500 opacity-50"
-    end
-  end
-
-  defp label_class(%{class: class}) do
-    ""
-  end
-
-  defp box_style(%{w: w, h: h}, %{bbox: bbox} = det) do
+  defp box_style(%{w: w, h: h}, %{bbox: bbox}) do
     left = max(round(bbox.cx - bbox.w / 2), 1)
     top = max(round(bbox.cy - bbox.h / 2), 1)
 
@@ -85,10 +72,12 @@ defmodule ExNVRWeb.GridLive do
     |> assign(size: %{})
     |> assign(fps: %{})
     |> assign(detector_fps: %{})
+    |> assign(latency: %{})
+    |> assign(inference_time: %{})
     |> then(&{:ok, &1})
   end
 
-  def handle_params(params, _uri, socket) do
+  def handle_params(_params, _uri, socket) do
     devices = Devices.list()
 
     if connected?(socket) do
@@ -112,6 +101,14 @@ defmodule ExNVRWeb.GridLive do
 
   def handle_info({:object_detector_fps, device_id, fps}, socket) do
     {:noreply, assign(socket, detector_fps: Map.put(socket.assigns.detector_fps, device_id, fps))}
+  end
+
+  def handle_info({:inference_latency, device_id, latency_ms}, socket) do
+    {:noreply, assign(socket, latency: Map.put(socket.assigns.latency, device_id, latency_ms))}
+  end
+
+  def handle_info({:inference_time, device_id, ms}, socket) do
+    {:noreply, assign(socket, inference_time: Map.put(socket.assigns.inference_time, device_id, ms))}
   end
 
   def handle_info({:detections, device_id, {w, h}, detections}, socket) do

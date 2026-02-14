@@ -61,15 +61,17 @@ config :exqlite, force_build: true
 config :ex_nvr, :object_detector,
   model_path: "/home/lawik/Downloads/yolo11n.onnx",
   classes_path: "/home/lawik/Downloads/coco_classes.json",
-  prob_threshold: 0.25
+  prob_threshold: 0.4
 
 config :nx, :default_backend, EXLA.Backend
 
-# config :exla, :clients,
-#  cuda: [platform: :cuda],
-#  rocm: [platform: :rocm],
-#  tpu: [platform: :tpu],
-#  host: [platform: :host]
+config :exla, :clients,
+  cuda: [platform: :cuda, preallocate: 0.3],
+  # rocm: [platform: :rocm],
+  # tpu: [platform: :tpu],
+  host: [platform: :host]
+
+config :ortex, Ortex.Native, features: [:cuda, :tensorrt]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

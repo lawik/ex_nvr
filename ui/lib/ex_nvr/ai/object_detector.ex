@@ -1,52 +1,86 @@
 defmodule ExNVR.AI.ObjectDetector do
   @moduledoc """
-  GenServer that subscribes to frames from a device's pipeline,
+  Membrane Sink that receives decoded RGB frames,
   runs YOLO object detection, and broadcasts detections via PubSub.
-
-  Each detection is a map with keys: `class`, `prob`, `bbox` (as `{cx, cy, w, h}`).
   """
 
-  use GenServer
+  use Membrane.Sink
 
-  require Logger
+  require Membrane.Logger
 
-  def start_link(opts) do
-    device_id = Keyword.fetch!(opts, :device_id)
-    GenServer.start_link(__MODULE__, opts, name: via(device_id))
-  end
+  alias Membrane.RawVideo
 
-  defp via(device_id), do: {:global, {__MODULE__, device_id}}
+  def_input_pad(:input,
+    accepted_format: RawVideo
+  )
+
+  def_options(
+    device_id: [
+      spec: binary(),
+      description: "Device ID for PubSub broadcasts"
+    ],
+    model_path: [
+      spec: binary(),
+      description: "Path to the YOLO model file"
+    ],
+    classes_path: [
+      spec: binary() | nil,
+      default: nil,
+      description: "Path to classes file"
+    ],
+    prob_threshold: [
+      spec: float(),
+      default: 0.25,
+      description: "Detection probability threshold"
+    ]
+  )
 
   @impl true
-  def init(opts) do
-    model_path = Keyword.fetch!(opts, :model_path)
-    classes_path = Keyword.get(opts, :classes_path)
-    prob_threshold = Keyword.get(opts, :prob_threshold, 0.5)
+  def handle_init(_ctx, options) do
+    state =
+      options
+      |> Map.from_struct()
+      |> Map.merge(%{
+        model: nil,
+        ts: System.monotonic_time(:millisecond),
+        width: nil,
+        height: nil
+      })
 
-    Phoenix.PubSub.subscribe(ExNVR.PubSub, "frames")
+    Process.set_label(:object_detector)
 
+    {[], state}
+  end
+
+  @impl true
+  def handle_setup(_ctx, state) do
     load_opts =
-      [model_path: model_path]
+      [model_path: state.model_path, eps: [:cpu]]
       |> then(fn o ->
-        if classes_path, do: Keyword.put(o, :classes_path, classes_path), else: o
+        if state.classes_path, do: Keyword.put(o, :classes_path, state.classes_path), else: o
       end)
 
     model = YOLO.load(load_opts)
 
-    {:ok,
-     %{
-       model: model,
-       prob_threshold: prob_threshold,
-       ts: System.monotonic_time(:millisecond)
-     }}
+    {[], %{state | model: model}}
   end
 
   @impl true
-  def handle_info({:frame, device_id, decoded}, state) do
+  def handle_stream_format(:input, %RawVideo{} = format, _ctx, state) do
+    {[], %{state | width: format.width, height: format.height}}
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, _ctx, state) do
+    width = state.width
+    height = state.height
+
+    inference_start = System.monotonic_time(:millisecond)
+
     mat =
-      decoded.data
+      buffer.payload
       |> Nx.from_binary(:u8)
-      |> Nx.reshape({decoded.height, decoded.width, 3})
+      |> Nx.reshape({height, width, 3})
 
     detections =
       state.model
@@ -56,10 +90,18 @@ defmodule ExNVR.AI.ObjectDetector do
       )
       |> YOLO.to_detected_objects(state.model.classes)
 
+    inference_time = System.monotonic_time(:millisecond) - inference_start
+
+    Phoenix.PubSub.broadcast(
+      ExNVR.PubSub,
+      "inference_stats",
+      {:inference_time, state.device_id, inference_time}
+    )
+
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
       "detections",
-      {:detections, device_id, {decoded.width, decoded.height}, detections}
+      {:detections, state.device_id, {width, height}, detections}
     )
 
     ts = System.monotonic_time(:millisecond)
@@ -69,10 +111,18 @@ defmodule ExNVR.AI.ObjectDetector do
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
       "inference_stats",
-      {:object_detector_fps, device_id, fps}
+      {:object_detector_fps, state.device_id, fps}
     )
 
-    {:noreply, %{state | ts: ts}}
+    latency_ms = ts - buffer.metadata.grabbed_at
+
+    Phoenix.PubSub.broadcast(
+      ExNVR.PubSub,
+      "inference_stats",
+      {:inference_latency, state.device_id, latency_ms}
+    )
+
+    {[], %{state | ts: ts}}
   end
 
   def fake do

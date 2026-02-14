@@ -436,13 +436,30 @@ defmodule ExNVR.Pipelines.Main do
         get_child(:tee)
         |> via_out(:push_output)
         |> via_in(:video)
-        |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers}),
-        get_child(:tee)
-        |> via_out(:push_output)
-        |> child({:framepicker, :main}, %Output.Framepicker{
-          device_id: state.device.id
-        })
-      ]
+        |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
+      ] ++ build_object_detection_spec(state)
+  end
+
+  defp build_object_detection_spec(state) do
+    case Application.get_env(:ex_nvr, :object_detector) do
+      nil ->
+        []
+
+      detector_config ->
+        [
+          get_child(:tee)
+          |> via_out(:push_output)
+          |> child({:framepicker, :main}, %Output.Framepicker{
+            device_id: state.device.id
+          })
+          |> child({:object_detector, :main}, %ExNVR.AI.ObjectDetector{
+            device_id: state.device.id,
+            model_path: Keyword.fetch!(detector_config, :model_path),
+            classes_path: Keyword.get(detector_config, :classes_path),
+            prob_threshold: Keyword.get(detector_config, :prob_threshold, 0.25)
+          })
+        ]
+    end
   end
 
   defp build_sub_stream_spec(%{device: device} = state) do

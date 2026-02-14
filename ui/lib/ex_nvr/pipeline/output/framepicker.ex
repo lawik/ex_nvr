@@ -1,17 +1,22 @@
 defmodule ExNVR.Pipeline.Output.Framepicker do
   @moduledoc """
   Extract frames from stream. The element will only decode keyframes.
+
+  Holds on to the latest decoded frame and only forwards it when the
+  downstream element (ObjectDetector) signals demand. This ensures the
+  detector always receives the most recent frame rather than working
+  through a stale queue.
   """
 
-  use Membrane.Sink
+  use Membrane.Filter
 
   require ExNVR.Utils
   require Membrane.Logger
 
   import ExNVR.MediaUtils, only: [to_annexb: 1]
 
-  alias ExNVR.AV.{Decoder, VideoProcessor}
-  alias Membrane.{Buffer, H264, H265}
+  alias ExNVR.AV.Decoder
+  alias Membrane.{Buffer, H264, H265, RawVideo}
 
   def_input_pad(:input,
     accepted_format:
@@ -19,6 +24,11 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         %H264{alignment: :au},
         %H265{alignment: :au}
       )
+  )
+
+  def_output_pad(:output,
+    accepted_format: RawVideo,
+    flow_control: :manual
   )
 
   def_options(
@@ -50,7 +60,9 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
       |> Map.merge(%{
         frame_height: nil,
         decoder: nil,
-        last_buffer_pts: nil
+        last_buffer_pts: nil,
+        latest_frame: nil,
+        demand: 0
       })
       |> Map.put(:ts, System.monotonic_time(:millisecond))
 
@@ -74,11 +86,19 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         Decoder.new(codec,
           out_height: out_height,
           out_width: state.frame_width,
-          # out_format: :bgr24
           out_format: :rgb24
         )
 
-      {[], %{state | frame_height: out_height, decoder: decoder}}
+      raw_video_format = %RawVideo{
+        width: state.frame_width,
+        height: out_height,
+        framerate: nil,
+        pixel_format: :RGB,
+        aligned: true
+      }
+
+      {[stream_format: {:output, raw_video_format}],
+       %{state | frame_height: out_height, decoder: decoder}}
     else
       {[], state}
     end
@@ -92,16 +112,14 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
   @impl true
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
+  @impl true
+  def handle_demand(:output, size, :buffers, _ctx, state) do
+    state = %{state | demand: state.demand + size}
+    maybe_send_frame(state)
+  end
+
   defp do_decode(buffer, state) do
     with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)) do
-      if state.device_id do
-        Phoenix.PubSub.broadcast(
-          ExNVR.PubSub,
-          "frames",
-          {:frame, state.device_id, decoded}
-        )
-      end
-
       ts = System.monotonic_time(:millisecond)
       diff = ts - state.ts
       fps = if diff > 0, do: Float.round(1000 / diff, 2), else: 0.0
@@ -114,11 +132,24 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         )
       end
 
-      {[], %{state | ts: ts}}
+      state = %{
+        state
+        | latest_frame: %Buffer{payload: decoded.data, metadata: %{grabbed_at: ts}},
+          ts: ts
+      }
+
+      maybe_send_frame(state)
     else
       error ->
         Membrane.Logger.error("Failed to pick frame: #{inspect(error)}")
         {[], state}
     end
   end
+
+  defp maybe_send_frame(%{latest_frame: frame, demand: demand} = state)
+       when frame != nil and demand > 0 do
+    {[buffer: {:output, frame}], %{state | latest_frame: nil, demand: demand - 1}}
+  end
+
+  defp maybe_send_frame(state), do: {[], state}
 end
