@@ -44,6 +44,7 @@ defmodule ExNVR.AI.ObjectDetector do
   def handle_info({:frame, device_id, jpeg_binary}, state) do
     IO.inspect(device_id, label: "device_id")
     %{shape: {w, h, _}} = mat = Evision.imdecode(jpeg_binary, Evision.Constant.cv_IMREAD_COLOR())
+    %{shape: {w, h, _}} = mat = Evision.resize(mat, {640, 640})
 
     detections =
       state.model
