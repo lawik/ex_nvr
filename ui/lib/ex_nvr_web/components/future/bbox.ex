@@ -11,6 +11,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
     * `confidence` - Detection confidence as a float 0-1 or percentage string
     * `style` - CSS positioning style string (left, top, width, height)
     * `info` - Optional bottom data readout text
+    * `log` - List of strings to render as a mini telemetry log below the bbox
   """
 
   use Phoenix.Component
@@ -19,6 +20,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   attr(:confidence, :string, default: "")
   attr(:style, :string, required: true)
   attr(:info, :string, default: nil)
+  attr(:log, :list, default: [])
 
   def variants(%{label: "person"} = assigns) do
     cyan(assigns)
@@ -35,6 +37,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   attr(:confidence, :string, default: "")
   attr(:style, :string, required: true)
   attr(:info, :string, default: nil)
+  attr(:log, :list, default: [])
 
   def cyan(assigns) do
     ~H"""
@@ -77,6 +80,11 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div :if={@info} class="absolute -bottom-6 left-0 text-[9px] text-neon-cyan/40 tracking-widest font-mono">
         {@info}
       </div>
+
+      <%!-- Log --%>
+      <div :if={@log != []} class="absolute bottom-1 left-1 px-1 font-mono text-[8px] leading-[1.4] whitespace-nowrap">
+        <div :for={line <- @log} class="text-neon-cyan/50">{line}</div>
+      </div>
     </div>
     """
   end
@@ -88,6 +96,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   attr(:confidence, :string, default: "")
   attr(:style, :string, required: true)
   attr(:info, :string, default: nil)
+  attr(:log, :list, default: [])
 
   def magenta(assigns) do
     ~H"""
@@ -120,6 +129,11 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div :if={@info} class="absolute -bottom-6 left-0 text-[9px] text-neon-magenta/40 tracking-widest font-mono">
         {@info}
       </div>
+
+      <%!-- Log --%>
+      <div :if={@log != []} class="absolute bottom-1 left-1 px-1 font-mono text-[8px] leading-[1.4] whitespace-nowrap">
+        <div :for={line <- @log} class="text-neon-magenta/50">{line}</div>
+      </div>
     </div>
     """
   end
@@ -131,6 +145,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   attr(:confidence, :string, default: "")
   attr(:style, :string, required: true)
   attr(:info, :string, default: nil)
+  attr(:log, :list, default: [])
 
   def lime(assigns) do
     ~H"""
@@ -169,6 +184,11 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div :if={@info} class="absolute -bottom-6 left-0 text-[9px] text-neon-lime/40 tracking-widest font-mono">
         {@info}
       </div>
+
+      <%!-- Log --%>
+      <div :if={@log != []} class="absolute bottom-1 left-1 px-1 font-mono text-[8px] leading-[1.4] whitespace-nowrap">
+        <div :for={line <- @log} class="text-neon-lime/50">{line}</div>
+      </div>
     </div>
     """
   end
@@ -180,6 +200,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   attr(:confidence, :string, default: "")
   attr(:style, :string, required: true)
   attr(:info, :string, default: nil)
+  attr(:log, :list, default: [])
 
   def amber(assigns) do
     ~H"""
@@ -210,6 +231,11 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div :if={@info} class="absolute -bottom-6 left-0 text-[9px] text-neon-amber/40 tracking-widest font-mono">
         {@info}
       </div>
+
+      <%!-- Log --%>
+      <div :if={@log != []} class="absolute bottom-1 left-1 px-1 font-mono text-[8px] leading-[1.4] whitespace-nowrap">
+        <div :for={line <- @log} class="text-neon-amber/50">{line}</div>
+      </div>
     </div>
     """
   end
@@ -221,6 +247,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   attr(:confidence, :string, default: "")
   attr(:style, :string, required: true)
   attr(:info, :string, default: nil)
+  attr(:log, :list, default: [])
 
   def red(assigns) do
     ~H"""
@@ -258,6 +285,11 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div :if={@info} class="absolute -bottom-6 left-0 text-[9px] text-neon-red/40 tracking-widest font-mono animate-flicker" style="animation-duration:3s">
         {@info}
       </div>
+
+      <%!-- Log --%>
+      <div :if={@log != []} class="absolute bottom-1 left-1 px-1 font-mono text-[8px] leading-[1.4] whitespace-nowrap">
+        <div :for={line <- @log} class="text-neon-red/50">{line}</div>
+      </div>
     </div>
     """
   end
@@ -269,6 +301,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
   attr(:confidence, :string, default: "")
   attr(:style, :string, required: true)
   attr(:info, :string, default: nil)
+  attr(:log, :list, default: [])
 
   def minimal(assigns) do
     ~H"""
@@ -291,6 +324,11 @@ defmodule ExNVRWeb.Components.Future.Bbox do
 
       <div :if={@info} class="absolute -bottom-5 right-0 text-[9px] text-neon-cyan/30 tracking-widest font-mono">
         {@info}
+      </div>
+
+      <%!-- Log --%>
+      <div :if={@log != []} class="absolute bottom-1 left-1 px-1 font-mono text-[8px] leading-[1.4] whitespace-nowrap">
+        <div :for={line <- @log} class="text-neon-cyan/40">{line}</div>
       </div>
     </div>
     """

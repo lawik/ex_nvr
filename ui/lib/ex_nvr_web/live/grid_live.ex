@@ -7,26 +7,14 @@ defmodule ExNVRWeb.GridLive do
 
   def render(assigns) do
     ~H"""
-    <div class="grid grid-rows-2 grid-cols-2 gap-4">
+    <div class="grid grid-rows-1 grid-cols-3 gap-2">
       <div :for={device <- @devices} class="relative">
         <div class="relative">
             <video id={"player-#{device.id}"} class="webRtcPlayer z-1" data-device={device.id} data-stream={:high} controls muted autoplay />
             <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
             <%= with size <- @size[device.id], detections <- @detections[device.id] || [] do %>
-                <Bbox.variants :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} />
+                <Bbox.variants :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} log={det_log(det, @size[device.id], @fps[device.id], @detector_fps[device.id], @inference_time[device.id], @latency[device.id])} />
             <% end %>
-            </div>
-        </div>
-        <div class="text-sm font-mono text-black">
-            <span :if={fps = @fps[device.id]}>Framepicker: {fps} fps</span>
-            <span :if={dfps = @detector_fps[device.id]}>Detector: {dfps} fps</span>
-            <span :if={inf = @inference_time[device.id]}>Inference: {inf} ms</span>
-            <span :if={lat = @latency[device.id]}>Latency: {lat} ms</span>
-        </div>
-        <div :if={detections = @detections[device.id]} class="">
-            <div>{inspect(@size[device.id])}</div>
-            <div :for={det <- detections} class="flex justify-between">
-            <pre>{ debug_detections(det) }</pre>
             </div>
         </div>
       </div>
@@ -58,10 +46,23 @@ defmodule ExNVRWeb.GridLive do
     end
   end
 
-  defp debug_detections(det) do
-    det
-    |> Enum.map(fn {key, value} -> "#{key}: #{inspect(value, pretty: true)}" end)
-    |> Enum.join("\n")
+  defp det_log(det, size, fps, detector_fps, inference_time, latency) do
+    bbox = det.bbox
+    hex_id = det.class_idx |> Integer.to_string(16) |> String.pad_leading(4, "0")
+    conf = Float.round(det.prob * 100, 1)
+
+    lines = [
+      "OBJ 0x#{hex_id} cls=#{det.class} conf=#{conf}%",
+      "POS cx:#{bbox.cx} cy:#{bbox.cy} w:#{bbox.w} h:#{bbox.h}"
+    ]
+
+    lines = if size, do: lines ++ ["SRC #{size.w}x#{size.h} buf_active"], else: lines
+    lines = if fps, do: lines ++ ["FRMK #{fps}fps pipe_ok"], else: lines
+    lines = if detector_fps, do: lines ++ ["YOLO #{detector_fps}fps model_run"], else: lines
+    lines = if inference_time, do: lines ++ ["INFER t=#{inference_time}ms gpu_exec"], else: lines
+    lines = if latency, do: lines ++ ["LATNC delta=#{latency}ms e2e"], else: lines
+
+    lines
   end
 
   def mount(_params, _session, socket) do
@@ -108,7 +109,8 @@ defmodule ExNVRWeb.GridLive do
   end
 
   def handle_info({:inference_time, device_id, ms}, socket) do
-    {:noreply, assign(socket, inference_time: Map.put(socket.assigns.inference_time, device_id, ms))}
+    {:noreply,
+     assign(socket, inference_time: Map.put(socket.assigns.inference_time, device_id, ms))}
   end
 
   def handle_info({:detections, device_id, {w, h}, detections}, socket) do

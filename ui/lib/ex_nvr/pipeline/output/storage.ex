@@ -20,52 +20,55 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @recordings_event [:ex_nvr, :recordings, :stop]
 
-  def_input_pad :input,
+  def_input_pad(:input,
     accepted_format:
       any_of(
         %H264{alignment: :au},
         %H265{alignment: :au}
       )
+  )
 
-  def_options device: [
-                spec: Device.t(),
-                description: "The device where this video belongs"
-              ],
-              stream: [
-                spec: :high | :low,
-                default: :high,
-                description: """
-                The type of the stream to store.
-                  * `high` - main stream
-                  * `low` - sub stream
-                """
-              ],
-              target_segment_duration: [
-                spec: Time.t(),
-                default: Time.seconds(60),
-                description: """
-                The duration of each segment.
-                A segment may not have the exact duration specified here, since each
-                segment must start from a keyframe. The real segment duration may be
-                slightly bigger
-                """
-              ],
-              correct_timestamp: [
-                spec: boolean(),
-                default: false,
-                description: """
-                Segment duration are calculated from the frame duration usin RTP timestamps.
+  def_options(
+    device: [
+      spec: Device.t(),
+      description: "The device where this video belongs"
+    ],
+    stream: [
+      spec: :high | :low,
+      default: :high,
+      description: """
+      The type of the stream to store.
+        * `high` - main stream
+        * `low` - sub stream
+      """
+    ],
+    target_segment_duration: [
+      spec: Time.t(),
+      default: Time.seconds(60),
+      description: """
+      The duration of each segment.
+      A segment may not have the exact duration specified here, since each
+      segment must start from a keyframe. The real segment duration may be
+      slightly bigger
+      """
+    ],
+    correct_timestamp: [
+      spec: boolean(),
+      default: false,
+      description: """
+      Segment duration are calculated from the frame duration usin RTP timestamps.
 
-                Camera clocks are not accurate, in a long run it'll drift from the NVR time.
-                Setting this to `true` will correct the segment end date towards the wall clock of the server.
+      Camera clocks are not accurate, in a long run it'll drift from the NVR time.
+      Setting this to `true` will correct the segment end date towards the wall clock of the server.
 
-                The max error the date will be adjusted is in the range ± 30 ms.
-                """
-              ],
-              onvif_replay: [
-                spec: boolean(),
-                default: false
-              ]
+      The max error the date will be adjusted is in the range ± 30 ms.
+      """
+    ],
+    onvif_replay: [
+      spec: boolean(),
+      default: false
+    ]
+  )
 
   @impl true
   def handle_init(_ctx, opts) do
@@ -119,7 +122,7 @@ defmodule ExNVR.Pipeline.Output.Storage do
     state =
       %{
         state
-        | current_segment: Segment.new(Time.milliseconds(buffer.metadata.timestamp)),
+        | current_segment: Segment.new(Time.milliseconds(fix_dt(buffer.metadata.timestamp))),
           first_segment?: not state.onvif_replay,
           last_buffer: buffer,
           monotonic_start_time: System.monotonic_time()
@@ -127,6 +130,14 @@ defmodule ExNVR.Pipeline.Output.Storage do
       |> open_file()
 
     {[notify_parent: :new_segment], state}
+  end
+
+  defp fix_dt(dt) do
+    millis =
+      case dt do
+        t when is_integer(t) -> t
+        %DateTime{} = dt -> DateTime.to_unix(dt, :millisecond)
+      end
   end
 
   @impl true
@@ -222,7 +233,8 @@ defmodule ExNVR.Pipeline.Output.Storage do
   end
 
   defp finalize_segment(%{current_segment: segment} = state, end_date, correct_timestamp) do
-    end_date = Time.milliseconds(end_date)
+    millis = fix_dt(end_date)
+    end_date = Time.milliseconds(millis)
     monotonic_duration = Time.monotonic_time() - state.monotonic_start_time
 
     {segment, discontinuity?} =
