@@ -16,11 +16,16 @@ defmodule ExNVRWeb.GridLive do
             <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
             <%= with size <- @size[device.id] do %>
                 <div :for={det <- @detections[device.id] || []}
-                     class={"absolute #{box_style(det)}"}
+                     class={"absolute #{box_class(det)}"}
                      style={box_style(size, det)}>
+                <span class={label_class(det)}>{det.class}</span>
                 </div>
             <% end %>
             </div>
+        </div>
+        <div class="text-sm font-mono text-black">
+            <span :if={fps = @fps[device.id]}>Framepicker: {fps} fps</span>
+            <span :if={dfps = @detector_fps[device.id]}>Detector: {dfps} fps</span>
         </div>
         <div :if={detections = @detections[device.id]} class="">
             <div>{inspect(@size[device.id])}</div>
@@ -37,12 +42,16 @@ defmodule ExNVRWeb.GridLive do
     """
   end
 
-  defp box_style(%{class: class}) do
+  defp box_class(%{class: class}) do
     case class do
       "person" -> "border border-green-500 rounded-sm bg-green-500 opacity-50"
       "blue" -> "border border-sky-500 rounded-sm bg-sky-500 opacity-50"
       _ -> "border border-purple-500 rounded-sm bg-purple-500 opacity-50"
     end
+  end
+
+  defp label_class(%{class: class}) do
+    ""
   end
 
   defp box_style(%{w: w, h: h}, %{bbox: bbox} = det) do
@@ -77,6 +86,8 @@ defmodule ExNVRWeb.GridLive do
     socket
     |> assign(detections: %{})
     |> assign(size: %{})
+    |> assign(fps: %{})
+    |> assign(detector_fps: %{})
     |> then(&{:ok, &1})
   end
 
@@ -85,6 +96,7 @@ defmodule ExNVRWeb.GridLive do
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(ExNVR.PubSub, "detections")
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "inference_stats")
     end
 
     devices = Enum.filter(devices, fn d -> d.state in [:recording, :streaming] end)
@@ -97,8 +109,15 @@ defmodule ExNVRWeb.GridLive do
     |> then(&{:noreply, &1})
   end
 
+  def handle_info({:framepicker_fps, device_id, fps}, socket) do
+    {:noreply, assign(socket, fps: Map.put(socket.assigns.fps, device_id, fps))}
+  end
+
+  def handle_info({:object_detector_fps, device_id, fps}, socket) do
+    {:noreply, assign(socket, detector_fps: Map.put(socket.assigns.detector_fps, device_id, fps))}
+  end
+
   def handle_info({:detections, device_id, {w, h}, detections}, socket) do
-    IO.inspect(detections)
     detections_map = Map.put(socket.assigns.detections, device_id, detections)
 
     {:noreply,

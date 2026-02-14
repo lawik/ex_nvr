@@ -21,7 +21,7 @@ defmodule ExNVR.AI.ObjectDetector do
   def init(opts) do
     model_path = Keyword.fetch!(opts, :model_path)
     classes_path = Keyword.get(opts, :classes_path)
-    prob_threshold = Keyword.get(opts, :prob_threshold, 0.25)
+    prob_threshold = Keyword.get(opts, :prob_threshold, 0.5)
 
     Phoenix.PubSub.subscribe(ExNVR.PubSub, "frames")
 
@@ -36,20 +36,23 @@ defmodule ExNVR.AI.ObjectDetector do
     {:ok,
      %{
        model: model,
-       prob_threshold: prob_threshold
+       prob_threshold: prob_threshold,
+       ts: System.monotonic_time(:millisecond)
      }}
   end
 
   @impl true
-  def handle_info({:frame, device_id, jpeg_binary}, state) do
-    IO.inspect(device_id, label: "device_id")
-    %{shape: {w, h, _}} = mat = Evision.imdecode(jpeg_binary, Evision.Constant.cv_IMREAD_COLOR())
-    %{shape: {w, h, _}} = mat = Evision.resize(mat, {640, 640})
+  def handle_info({:frame, device_id, decoded}, state) do
+    %{shape: {w, h, _}} =
+      mat = Evision.Mat.from_binary(decoded.data, {:u, 8}, decoded.height, decoded.width, 3)
+
+    # %{shape: {w, h, _}} = mat = Evision.imdecode(jpeg_binary, Evision.Constant.cv_IMREAD_COLOR())
+    IO.inspect(mat, label: "mat")
+    # %{shape: {w, h, _}} = mat = Evision.resize(mat, {640, 640})
 
     detections =
       state.model
       |> YOLO.detect(mat, prob_threshold: state.prob_threshold)
-      |> IO.inspect(label: "detections")
       |> YOLO.to_detected_objects(state.model.classes)
 
     Phoenix.PubSub.broadcast(
@@ -58,7 +61,17 @@ defmodule ExNVR.AI.ObjectDetector do
       {:detections, device_id, {w, h}, detections}
     )
 
-    {:noreply, state}
+    ts = System.monotonic_time(:millisecond)
+    diff = ts - state.ts
+    fps = if diff > 0, do: Float.round(1000 / diff, 2), else: 0.0
+
+    Phoenix.PubSub.broadcast(
+      ExNVR.PubSub,
+      "inference_stats",
+      {:object_detector_fps, device_id, fps}
+    )
+
+    {:noreply, %{state | ts: ts}}
   end
 
   def fake do

@@ -65,14 +65,11 @@ config :ex_nvr, :object_detector,
 
 config :nx, :default_backend, EXLA.Backend
 
-config :nx,
-  default_backend: {EXLA.Backend, client: :cuda}
-
-config :exla, :clients,
-  cuda: [platform: :cuda],
-  rocm: [platform: :rocm],
-  tpu: [platform: :tpu],
-  host: [platform: :host]
+# config :exla, :clients,
+#  cuda: [platform: :cuda],
+#  rocm: [platform: :rocm],
+#  tpu: [platform: :tpu],
+#  host: [platform: :host]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

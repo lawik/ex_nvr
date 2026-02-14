@@ -32,7 +32,7 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
     ],
     frame_width: [
       spec: non_neg_integer(),
-      default: 1280,
+      default: 640,
       description: "The width of the generated frame"
     ],
     device_id: [
@@ -52,6 +52,7 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         decoder: nil,
         last_buffer_pts: nil
       })
+      |> Map.put(:ts, System.monotonic_time(:millisecond))
 
     Process.set_label(:framepicker)
 
@@ -65,10 +66,16 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
     if is_nil(old_stream_format) or old_stream_format != format do
       codec = if is_struct(format, H264), do: :h264, else: :hevc
 
-      out_height = div(state.frame_width * format.height, format.width)
-      out_height = out_height - rem(out_height, 2)
+      # out_height = div(state.frame_width * format.height, format.width)
+      # out_height = out_height - rem(out_height, 2)
+      out_height = 640
 
-      decoder = Decoder.new(codec, out_height: out_height, out_width: state.frame_width)
+      decoder =
+        Decoder.new(codec,
+          out_height: out_height,
+          out_width: state.frame_width,
+          out_format: :bgr24
+        )
 
       {[], %{state | frame_height: out_height, decoder: decoder}}
     else
@@ -78,8 +85,6 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
-    last_pts = state.last_buffer_pts || Buffer.get_dts_or_pts(buffer)
-
     do_decode(buffer, state)
   end
 
@@ -87,19 +92,28 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
   def handle_buffer(:input, _buffer, _ctx, state), do: {[], state}
 
   defp do_decode(buffer, state) do
-    with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)),
-         jpeg_image <- VideoProcessor.encode_to_jpeg(decoded) do
-      Membrane.Logger.info("Frame for #{state.device_id}")
-
+    with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)) do
       if state.device_id do
         Phoenix.PubSub.broadcast(
           ExNVR.PubSub,
           "frames",
-          {:frame, state.device_id, jpeg_image}
+          {:frame, state.device_id, decoded}
         )
       end
 
-      {[], state}
+      ts = System.monotonic_time(:millisecond)
+      diff = ts - state.ts
+      fps = if diff > 0, do: Float.round(1000 / diff, 2), else: 0.0
+
+      if state.device_id do
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "inference_stats",
+          {:framepicker_fps, state.device_id, fps}
+        )
+      end
+
+      {[], %{state | ts: ts}}
     else
       error ->
         Membrane.Logger.error("Failed to pick frame: #{inspect(error)}")
