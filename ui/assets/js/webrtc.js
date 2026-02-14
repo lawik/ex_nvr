@@ -23,7 +23,7 @@ window.onload = function (_event) {
       })
       .receive("error", (reason) => {
         log("Unable to join channel: " + format_join_error(reason));
-        alert("could not join channel: " + format_join_error(reason));
+        //alert("could not join channel: " + format_join_error(reason));
         channel.leave();
       });
 
@@ -56,7 +56,7 @@ window.onload = function (_event) {
 
     pc.onconnectionstatechange = (event) => {
       if (pc.connectionState == "disconnected") {
-        alert("connection closed, refresh browser to retry");
+        //alert("connection closed, refresh browser to retry");
         pc.close();
       }
     };

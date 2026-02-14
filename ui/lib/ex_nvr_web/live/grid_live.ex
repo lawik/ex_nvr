@@ -11,12 +11,22 @@ defmodule ExNVRWeb.GridLive do
     ~H"""
     <div class="grid grid-rows-2 grid-cols-2 gap-4">
       <div :for={device <- @devices} class="relative">
-        <video id={"player-#{device.id}"} class="webRtcPlayer" data-device={device.id} data-stream={:high} controls muted autoplay />
-        <div :if={detections = @detections[device.id]} class="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 max-h-24 overflow-y-auto">
-          <div :for={det <- detections} class="flex justify-between">
-            <span><%= det.class %></span>
-            <span><%= Float.round(det.prob * 100, 1) %>%</span>
-          </div>
+        <div class="relative">
+            <video id={"player-#{device.id}"} class="webRtcPlayer z-1" data-device={device.id} data-stream={:high} controls muted autoplay />
+            <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
+            <%= with size <- @size[device.id] do %>
+                <div :for={det <- @detections[device.id] || []}
+                     class={"absolute #{box_style(det)}"}
+                     style={box_style(size, det)}>
+                </div>
+            <% end %>
+            </div>
+        </div>
+        <div :if={detections = @detections[device.id]} class="">
+            <div>{inspect(@size[device.id])}</div>
+            <div :for={det <- detections} class="flex justify-between">
+            <pre>{ debug_detections(det) }</pre>
+            </div>
         </div>
       </div>
       <script>
@@ -27,11 +37,46 @@ defmodule ExNVRWeb.GridLive do
     """
   end
 
+  defp box_style(%{class: class}) do
+    case class do
+      "person" -> "border border-green-500 rounded-sm bg-green-500 opacity-50"
+      "blue" -> "border border-sky-500 rounded-sm bg-sky-500 opacity-50"
+      _ -> "border border-purple-500 rounded-sm bg-purple-500 opacity-50"
+    end
+  end
+
+  defp box_style(%{w: w, h: h}, %{bbox: bbox} = det) do
+    left = max(round(bbox.cx - bbox.w / 2), 1)
+    top = max(round(bbox.cy - bbox.h / 2), 1)
+
+    """
+    left: #{clamper(100 / (w / left))}%;
+    top: #{clamper(100 / (h / top))}%;
+    width: #{clamper(100 / (w / bbox.w))}%;
+    height: #{clamper(100 / (h / bbox.h))}%;
+    """
+  end
+
+  defp clamper(percent) do
+    cond do
+      percent > 100 -> 100
+      percent < 0 -> 0
+      percent -> percent
+    end
+  end
+
+  defp debug_detections(det) do
+    det
+    |> Enum.map(fn {key, value} -> "#{key}: #{inspect(value, pretty: true)}" end)
+    |> Enum.join("\n")
+  end
+
   def mount(_params, _session, socket) do
     Recordings.subscribe_to_recording_events()
 
     socket
     |> assign(detections: %{})
+    |> assign(size: %{})
     |> then(&{:ok, &1})
   end
 
@@ -39,26 +84,29 @@ defmodule ExNVRWeb.GridLive do
     devices = Devices.list()
 
     if connected?(socket) do
-      Enum.each(devices, fn device ->
-        Phoenix.PubSub.subscribe(ExNVR.PubSub, "detections:#{device.id}")
-      end)
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "detections")
     end
 
-    device =
-      Enum.find(devices, List.first(devices), &(&1.id == params["device_id"]))
+    IO.inspect(devices, label: "devices")
+    devices = Enum.filter(devices, fn d -> d.state in [:recording, :streaming] end)
 
     token = Phoenix.Token.sign(socket, "user socket", socket.assigns.current_user.id)
 
     socket
     |> assign(devices: devices)
-    |> assign(current_device: device)
     |> assign(user_token: token)
     |> then(&{:noreply, &1})
   end
 
-  def handle_info({:detections, device_id, detections}, socket) do
+  def handle_info({:detections, device_id, {w, h}, detections}, socket) do
+    IO.inspect(detections)
     detections_map = Map.put(socket.assigns.detections, device_id, detections)
-    {:noreply, assign(socket, detections: detections_map)}
+
+    {:noreply,
+     assign(socket,
+       detections: detections_map,
+       size: Map.put(socket.assigns.size, device_id, %{w: w, h: h})
+     )}
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}

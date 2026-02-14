@@ -436,7 +436,12 @@ defmodule ExNVR.Pipelines.Main do
         get_child(:tee)
         |> via_out(:push_output)
         |> via_in(:video)
-        |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
+        |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers}),
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> child({:framepicker, :main}, %Output.Framepicker{
+          device_id: state.device.id
+        })
       ]
   end
 

@@ -59,8 +59,8 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 config :exqlite, force_build: true
 
 config :ex_nvr, :object_detector,
-  model_path: "/home/lawik/Downloads/yolov8n.onnx",
-  classes_path: "./yolo_classes.json",
+  model_path: "/home/lawik/Downloads/yolo11n.onnx",
+  classes_path: "/home/lawik/Downloads/coco_classes.json",
   prob_threshold: 0.25
 
 # Import environment specific config. This must remain at the bottom
