@@ -87,7 +87,6 @@ defmodule ExNVRWeb.GridLive do
       Phoenix.PubSub.subscribe(ExNVR.PubSub, "detections")
     end
 
-    IO.inspect(devices, label: "devices")
     devices = Enum.filter(devices, fn d -> d.state in [:recording, :streaming] end)
 
     token = Phoenix.Token.sign(socket, "user socket", socket.assigns.current_user.id)
