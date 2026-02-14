@@ -43,22 +43,23 @@ defmodule ExNVR.AI.ObjectDetector do
 
   @impl true
   def handle_info({:frame, device_id, decoded}, state) do
-    %{shape: {w, h, _}} =
-      mat = Evision.Mat.from_binary(decoded.data, {:u, 8}, decoded.height, decoded.width, 3)
-
-    # %{shape: {w, h, _}} = mat = Evision.imdecode(jpeg_binary, Evision.Constant.cv_IMREAD_COLOR())
-    IO.inspect(mat, label: "mat")
-    # %{shape: {w, h, _}} = mat = Evision.resize(mat, {640, 640})
+    mat =
+      decoded.data
+      |> Nx.from_binary(:u8)
+      |> Nx.reshape({decoded.height, decoded.width, 3})
 
     detections =
       state.model
-      |> YOLO.detect(mat, prob_threshold: state.prob_threshold)
+      |> YOLO.detect(mat,
+        prob_threshold: state.prob_threshold,
+        frame_scaler: YOLO.FrameScalers.NxIdentityScaler
+      )
       |> YOLO.to_detected_objects(state.model.classes)
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
       "detections",
-      {:detections, device_id, {w, h}, detections}
+      {:detections, device_id, {decoded.width, decoded.height}, detections}
     )
 
     ts = System.monotonic_time(:millisecond)

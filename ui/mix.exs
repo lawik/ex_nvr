@@ -90,7 +90,7 @@ defmodule ExNVR.MixProject do
       # Nx is mostly used for pre/post processing
       {:exla, "~> 0.9.2"},
       # evision for image processing (you can use :image instead)
-      {:evision, "~> 0.2.0"},
+      # {:evision, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_live_reload, "~> 1.2", only: [:dev, :test]},

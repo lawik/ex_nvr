@@ -74,7 +74,8 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         Decoder.new(codec,
           out_height: out_height,
           out_width: state.frame_width,
-          out_format: :bgr24
+          # out_format: :bgr24
+          out_format: :rgb24
         )
 
       {[], %{state | frame_height: out_height, decoder: decoder}}

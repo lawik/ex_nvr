@@ -5,6 +5,7 @@ defmodule ExNVRWeb.GridLive do
   alias ExNVR.Devices
   alias ExNVR.Model.Device
   alias ExNVR.Recordings
+  alias ExNVRWeb.Components.Future.Bbox
   alias ExNVRWeb.Router.Helpers, as: Routes
 
   def render(assigns) do
@@ -14,12 +15,8 @@ defmodule ExNVRWeb.GridLive do
         <div class="relative">
             <video id={"player-#{device.id}"} class="webRtcPlayer z-1" data-device={device.id} data-stream={:high} controls muted autoplay />
             <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
-            <%= with size <- @size[device.id] do %>
-                <div :for={det <- @detections[device.id] || []}
-                     class={"absolute #{box_class(det)}"}
-                     style={box_style(size, det)}>
-                <span class={label_class(det)}>{det.class}</span>
-                </div>
+            <%= with size <- @size[device.id], detections <- @detections[device.id] || [] do %>
+                <Bbox.cyan :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} />
             <% end %>
             </div>
         </div>

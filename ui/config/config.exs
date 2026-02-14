@@ -61,7 +61,7 @@ config :exqlite, force_build: true
 config :ex_nvr, :object_detector,
   model_path: "/home/lawik/Downloads/yolo11n.onnx",
   classes_path: "/home/lawik/Downloads/coco_classes.json",
-  prob_threshold: 0.25
+  prob_threshold: 0.5
 
 config :nx, :default_backend, EXLA.Backend
 
