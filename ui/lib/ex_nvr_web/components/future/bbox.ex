@@ -30,7 +30,9 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div class="absolute inset-0 bg-neon-cyan/[0.03] rounded-sm"></div>
 
       <%!-- Scanline --%>
-      <div class="absolute inset-x-0 h-[30%] animate-scanline scanline-cyan pointer-events-none rounded-sm overflow-hidden"></div>
+      <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-sm overflow-hidden">
+        <div class="absolute inset-x-0  h-[30%] animate-scanline scanline-cyan"></div>
+      </div>
 
       <%!-- Dashed animated border via SVG --%>
       <svg class="absolute inset-0 w-full h-full dash-animate pointer-events-none">

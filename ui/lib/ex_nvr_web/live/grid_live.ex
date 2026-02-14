@@ -16,7 +16,7 @@ defmodule ExNVRWeb.GridLive do
             <video id={"player-#{device.id}"} class="webRtcPlayer z-1" data-device={device.id} data-stream={:high} controls muted autoplay />
             <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
             <%= with size <- @size[device.id], detections <- @detections[device.id] || [] do %>
-                <Bbox.cyan :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} />
+                <Bbox.variants :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} />
             <% end %>
             </div>
         </div>

@@ -33,8 +33,8 @@ module.exports = {
       },
       keyframes: {
         scanline: {
-          "0%": { top: "-10%" },
-          "100%": { top: "110%" },
+          "0%": { top: "-15%" },
+          "100%": { top: "115%" },
         },
         cornerPulse: {
           "0%, 100%": { opacity: "1" },
