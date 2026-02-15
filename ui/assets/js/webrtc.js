@@ -54,6 +54,10 @@ window.onload = function (_event) {
       player.srcObject = track.streams[0];
     };
 
+    player.addEventListener("loadeddata", () => {
+      player.classList.remove("hidden");
+    });
+
     pc.onconnectionstatechange = (event) => {
       if (pc.connectionState == "disconnected") {
         //alert("connection closed, refresh browser to retry");

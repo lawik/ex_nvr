@@ -63,7 +63,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div class="absolute -bottom-px -right-px w-5 h-5 border-b-2 border-r-2 border-neon-cyan animate-cornerPulse drop-shadow-[0_0_6px_#00f0ff]" style="animation-delay:1.2s"></div>
 
       <%!-- Label --%>
-      <div class="absolute -top-7 left-0 flex items-center gap-2">
+      <div class="absolute top-1 left-1 flex items-center gap-2">
         <span class="bg-neon-cyan/90 text-black font-orbitron text-[10px] font-bold tracking-widest px-2 py-0.5 uppercase">{@label}</span>
         <span class="text-neon-cyan/70 text-[10px] tracking-wider animate-flicker">{@confidence}</span>
       </div>
@@ -102,7 +102,9 @@ defmodule ExNVRWeb.Components.Future.Bbox do
     ~H"""
     <div class="absolute" style={@style}>
       <div class="absolute inset-0 bg-neon-magenta/[0.03]"></div>
-      <div class="absolute inset-x-0 h-[30%] animate-scanline scanline-magenta pointer-events-none" style="animation-duration:3s"></div>
+      <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-sm overflow-hidden">
+        <div class="absolute inset-x-0  h-[30%] animate-scanline scanline-magenta" style="animation-duration:3s"></div>
+      </div>
 
       <%!-- Double border --%>
       <div class="absolute inset-0 border border-neon-magenta/30 shadow-[0_0_12px_rgba(255,0,228,0.15),inset_0_0_12px_rgba(255,0,228,0.05)]"></div>
@@ -121,7 +123,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div class="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-neon-magenta/60"></div>
 
       <%!-- Label --%>
-      <div class="absolute -top-7 left-0 flex items-center gap-2">
+      <div class="absolute top-1 left-1 flex items-center gap-2">
         <span class="bg-neon-magenta/90 text-black font-orbitron text-[10px] font-bold tracking-widest px-2 py-0.5 uppercase">{@label}</span>
         <span class="text-neon-magenta/70 text-[10px] tracking-wider animate-flicker">{@confidence}</span>
       </div>
@@ -151,7 +153,9 @@ defmodule ExNVRWeb.Components.Future.Bbox do
     ~H"""
     <div class="absolute" style={@style}>
       <div class="absolute inset-0 bg-neon-lime/[0.03] rounded-sm"></div>
-      <div class="absolute inset-x-0 h-[30%] animate-scanline scanline-lime pointer-events-none" style="animation-duration:1.8s"></div>
+      <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-sm overflow-hidden">
+        <div class="absolute inset-x-0  h-[30%] animate-scanline scanline-lime" style="animation-duration:1.8s"></div>
+      </div>
 
       <%!-- Glitching border --%>
       <div class="absolute inset-0 border border-neon-lime/40 animate-glitchX shadow-[0_0_10px_rgba(57,255,20,0.15)]"></div>
@@ -172,7 +176,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div class="absolute bottom-1 right-1 w-4 h-4 border-b border-r border-neon-lime/60"></div>
 
       <%!-- Label --%>
-      <div class="absolute -top-7 left-0 flex items-center gap-2">
+      <div class="absolute top-1 left-1 flex items-center gap-2">
         <span class="border border-neon-lime text-neon-lime font-orbitron text-[10px] font-bold tracking-widest px-2 py-0.5 uppercase bg-neon-lime/10">{@label}</span>
         <span class="text-neon-lime/70 text-[10px] tracking-wider animate-flicker">{@confidence}</span>
       </div>
@@ -206,7 +210,9 @@ defmodule ExNVRWeb.Components.Future.Bbox do
     ~H"""
     <div class="absolute" style={@style}>
       <div class="absolute inset-0 bg-neon-amber/[0.04]"></div>
-      <div class="absolute inset-x-0 h-[30%] animate-scanline scanline-amber pointer-events-none" style="animation-duration:2s"></div>
+      <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-sm overflow-hidden">
+        <div class="absolute inset-x-0  h-[30%] animate-scanline scanline-amber" style="animation-duration:2s"></div>
+      </div>
 
       <%!-- Thick outer + thin inner border --%>
       <div class="absolute inset-0 border-2 border-neon-amber/50 shadow-[0_0_16px_rgba(255,174,0,0.2),inset_0_0_16px_rgba(255,174,0,0.05)] animate-flicker"></div>
@@ -223,7 +229,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div class="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-neon-amber/40 to-transparent"></div>
 
       <%!-- Label --%>
-      <div class="absolute -top-7 left-0 flex items-center gap-2">
+      <div class="absolute top-1 left-1 flex items-center gap-2">
         <span class="bg-neon-amber text-black font-orbitron text-[10px] font-black tracking-widest px-2 py-0.5 uppercase animate-flicker">{@label}</span>
         <span class="text-neon-amber/70 text-[10px] tracking-wider">{@confidence}</span>
       </div>
@@ -253,7 +259,9 @@ defmodule ExNVRWeb.Components.Future.Bbox do
     ~H"""
     <div class="absolute" style={@style}>
       <div class="absolute inset-0 bg-neon-red/[0.05]"></div>
-      <div class="absolute inset-x-0 h-[30%] animate-scanline scanline-red pointer-events-none" style="animation-duration:1.5s"></div>
+      <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-sm overflow-hidden">
+        <div class="absolute inset-x-0  h-[30%] animate-scanline scanline-red" style="animation-duration:1.5s"></div>
+      </div>
 
       <%!-- Triple border --%>
       <div class="absolute inset-0 border-2 border-neon-red/70 animate-glitchX shadow-[0_0_20px_rgba(255,32,64,0.3),inset_0_0_20px_rgba(255,32,64,0.08)]"></div>
@@ -277,7 +285,7 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       </div>
 
       <%!-- Label --%>
-      <div class="absolute -top-7 left-0 flex items-center gap-2">
+      <div class="absolute top-1 left-1 flex items-center gap-2">
         <span class="bg-neon-red text-black font-orbitron text-[10px] font-black tracking-widest px-2 py-0.5 uppercase animate-glitchX">{@label}</span>
         <span class="text-neon-red/80 text-[10px] tracking-wider animate-flicker" style="animation-duration:2s">{@confidence}</span>
       </div>
@@ -315,7 +323,9 @@ defmodule ExNVRWeb.Components.Future.Bbox do
       <div class="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-neon-cyan/80 animate-cornerPulse drop-shadow-[0_0_4px_#00f0ff]" style="animation-delay:1.5s"></div>
 
       <%!-- Scanline --%>
-      <div class="absolute inset-x-0 h-[25%] animate-scanline scanline-cyan pointer-events-none" style="animation-duration:3.5s"></div>
+      <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none rounded-sm overflow-hidden">
+        <div class="absolute inset-x-0  h-[30%] animate-scanline scanline-cyan" style="animation-duration:3.5s"></div>
+      </div>
 
       <%!-- Minimal label --%>
       <div class="absolute -top-6 left-0">

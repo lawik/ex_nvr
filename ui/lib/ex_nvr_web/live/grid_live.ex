@@ -7,10 +7,10 @@ defmodule ExNVRWeb.GridLive do
 
   def render(assigns) do
     ~H"""
-    <div class="grid grid-rows-1 grid-cols-3 gap-2">
+    <div class="bg-black pt-12 grid grid-rows-1 grid-cols-3 gap-2 min-h-screen w-full">
       <div :for={device <- @devices} class="relative">
         <div class="relative">
-            <video id={"player-#{device.id}"} class="webRtcPlayer z-1" data-device={device.id} data-stream={:high} controls muted autoplay />
+            <video phx-update="ignore" id={"player-#{device.id}"} class="webRtcPlayer w-full z-1 hidden" data-device={device.id} data-stream={:high} controls muted autoplay />
             <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
             <%= with size <- @size[device.id], detections <- @detections[device.id] || [] do %>
                 <Bbox.variants :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} log={det_log(det, @size[device.id], @fps[device.id], @detector_fps[device.id], @inference_time[device.id], @latency[device.id])} />
@@ -30,18 +30,32 @@ defmodule ExNVRWeb.GridLive do
     left = max(round(bbox.cx - bbox.w / 2), 1)
     top = max(round(bbox.cy - bbox.h / 2), 1)
 
+    l = clamper(100 / (w / left))
+    t = clamper(100 / (h / top))
+
     """
-    left: #{clamper(100 / (w / left))}%;
-    top: #{clamper(100 / (h / top))}%;
-    width: #{clamper(100 / (w / bbox.w))}%;
-    height: #{clamper(100 / (h / bbox.h))}%;
+    left: #{l}%;
+    top: #{t}%;
+    width: #{total_clamp(100 / (w / bbox.w), l)}%;
+    height: #{total_clamp(100 / (h / bbox.h), t)}%;
     """
   end
 
   defp clamper(percent) do
     cond do
-      percent > 100 -> 100
-      percent < 0 -> 0
+      percent >= 99.5 -> 99.5
+      percent <= 0.5 -> 0.5
+      percent -> percent
+    end
+  end
+
+  defp total_clamp(percent, added) do
+    max = 99.5
+    min = 0.5
+
+    cond do
+      percent + added >= max -> max - added
+      percent + added <= min -> min - added
       percent -> percent
     end
   end
