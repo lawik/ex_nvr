@@ -65,13 +65,12 @@ config :ex_nvr, :object_detector,
 
 config :nx, :default_backend, EXLA.Backend
 
-config :exla, :clients,
-  cuda: [platform: :cuda, preallocate: 0.3],
-  # rocm: [platform: :rocm],
-  # tpu: [platform: :tpu],
-  host: [platform: :host]
+config :exla, :clients, cuda: [platform: :cuda, preallocate: false]
+#  host: [platform: :host]
 
-config :ortex, Ortex.Native, features: [:cuda, :tensorrt]
+config :nx, :default_defn_options, compiler: EXLA
+# TODO: case darwin and coreml (also in object_detector)
+config :ortex, Ortex.Native, features: [:cuda]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

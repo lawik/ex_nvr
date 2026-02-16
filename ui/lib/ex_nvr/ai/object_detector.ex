@@ -55,7 +55,7 @@ defmodule ExNVR.AI.ObjectDetector do
   @impl true
   def handle_setup(_ctx, state) do
     load_opts =
-      [model_path: state.model_path, eps: [:cpu]]
+      [model_path: state.model_path, eps: [:cuda]]
       |> then(fn o ->
         if state.classes_path, do: Keyword.put(o, :classes_path, state.classes_path), else: o
       end)
