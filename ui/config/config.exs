@@ -65,8 +65,8 @@ config :ex_nvr, :object_detector,
 
 # config :nx, :default_backend, EXLA.Backend
 # config :nx, :default_backend, EMLX.Backend
-# config :nx, :default_backend, {EMLX.Backend, device: :cpu}
-config :nx, :default_backend, {EMLX.Backend, device: :gpu}
+config :nx, :default_backend, {EMLX.Backend, device: :cpu}
+# config :nx, :default_backend, {EMLX.Backend, device: :gpu}
 
 config :exla,
   clients: [
