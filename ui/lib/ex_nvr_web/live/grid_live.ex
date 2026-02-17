@@ -30,7 +30,6 @@ defmodule ExNVRWeb.GridLive do
   defp box_style(%{w: w, h: h}, %{bbox: bbox}) do
     left = max(round(bbox.cx - bbox.w / 2), 1)
     top = max(round(bbox.cy - bbox.h / 2), 1)
-    IO.inspect({left, top}, label: "box pos")
 
     l = clamper(100 / (w / left))
     t = clamper(100 / (h / top))

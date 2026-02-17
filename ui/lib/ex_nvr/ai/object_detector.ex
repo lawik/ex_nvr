@@ -89,17 +89,15 @@ defmodule ExNVR.AI.ObjectDetector do
     # we are going to add padding to match the model input shape
     width_padding = (target_w - scaled_width) / 2
     height_padding = (target_h - scaled_height) / 2
-    {width_padding, height_padding}
+    {ratio, width_padding, height_padding}
   end
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
     width = state.width
     height = state.height
-    IO.inspect({width, height}, label: "dimensions")
 
-    {w_pad, h_pad} = calculate_padding(state.width, state.height, 640, 640)
-    IO.inspect({w_pad, h_pad}, label: "padding")
+    {ratio, w_pad, h_pad} = calculate_padding(state.width, state.height, 640, 640)
 
     inference_start = System.monotonic_time(:millisecond)
 
@@ -120,6 +118,19 @@ defmodule ExNVR.AI.ObjectDetector do
         frame_scaler: YOLO.FrameScalers.NxIdentityScaler
       )
       |> YOLO.to_detected_objects(state.model.classes)
+      |> Enum.map(fn det ->
+        bbox = det.bbox
+
+        %{
+          det
+          | bbox: %{
+              cx: (bbox.cx - w_pad) / ratio,
+              cy: (bbox.cy - h_pad) / ratio,
+              w: bbox.w / ratio,
+              h: bbox.h / ratio
+            }
+        }
+      end)
 
     inference_time = System.monotonic_time(:millisecond) - inference_start
 
@@ -128,8 +139,6 @@ defmodule ExNVR.AI.ObjectDetector do
       "inference_stats",
       {:inference_time, state.device_id, inference_time}
     )
-
-    # IO.inspect(detections)
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
