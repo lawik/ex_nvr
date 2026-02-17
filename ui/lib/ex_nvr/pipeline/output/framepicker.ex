@@ -78,9 +78,9 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
     if is_nil(old_stream_format) or old_stream_format != format do
       codec = if is_struct(format, H264), do: :h264, else: :hevc
 
-      # out_height = div(state.frame_width * format.height, format.width)
-      # out_height = out_height - rem(out_height, 2)
-      out_height = 640
+      out_height = div(state.frame_width * format.height, format.width)
+      out_height = out_height - rem(out_height, 2)
+      # out_height = 640
 
       decoder =
         Decoder.new(codec,

@@ -7,13 +7,14 @@ defmodule ExNVRWeb.GridLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-black pt-12 grid grid-rows-1 grid-cols-3 gap-2 min-h-screen w-full">
+    <div class="bg-black pt-12 grid grid-rows-1 grid-cols-2 gap-2 min-h-screen w-full">
       <div :for={device <- @devices} class="relative">
         <div class="relative">
             <video phx-update="ignore" id={"player-#{device.id}"} class="webRtcPlayer w-full z-1 hidden" data-device={device.id} data-stream={:high} controls muted autoplay />
             <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
             <%= with size <- @size[device.id], detections <- @detections[device.id] || [] do %>
                 <Bbox.variants :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} log={det_log(det, @size[device.id], @fps[device.id], @detector_fps[device.id], @inference_time[device.id], @latency[device.id])} />
+                <pre class="text-white bg-black">{ @inference_time[device.id] }ms</pre>
             <% end %>
             </div>
         </div>
@@ -29,6 +30,7 @@ defmodule ExNVRWeb.GridLive do
   defp box_style(%{w: w, h: h}, %{bbox: bbox}) do
     left = max(round(bbox.cx - bbox.w / 2), 1)
     top = max(round(bbox.cy - bbox.h / 2), 1)
+    IO.inspect({left, top}, label: "box pos")
 
     l = clamper(100 / (w / left))
     t = clamper(100 / (h / top))

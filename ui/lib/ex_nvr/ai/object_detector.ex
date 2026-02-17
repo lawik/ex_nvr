@@ -35,6 +35,8 @@ defmodule ExNVR.AI.ObjectDetector do
     ]
   )
 
+  @pad_value 114
+
   @impl true
   def handle_init(_ctx, options) do
     state =
@@ -70,10 +72,34 @@ defmodule ExNVR.AI.ObjectDetector do
     {[], %{state | width: format.width, height: format.height}}
   end
 
+  defp calculate_padding(img_w, img_h, target_w, target_h) do
+    width_ratio = target_w / img_w
+    height_ratio = target_h / img_h
+    ratio = min(width_ratio, height_ratio)
+
+    {scaled_width, scaled_height} =
+      if width_ratio < height_ratio do
+        # landscape, width = model input size
+        {target_w, ceil(img_h * ratio)}
+      else
+        # portrait or squared, height = model input size
+        {ceil(img_w * ratio), target_h}
+      end
+
+    # we are going to add padding to match the model input shape
+    width_padding = (target_w - scaled_width) / 2
+    height_padding = (target_h - scaled_height) / 2
+    {width_padding, height_padding}
+  end
+
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
     width = state.width
     height = state.height
+    IO.inspect({width, height}, label: "dimensions")
+
+    {w_pad, h_pad} = calculate_padding(state.width, state.height, 640, 640)
+    IO.inspect({w_pad, h_pad}, label: "padding")
 
     inference_start = System.monotonic_time(:millisecond)
 
@@ -81,6 +107,11 @@ defmodule ExNVR.AI.ObjectDetector do
       buffer.payload
       |> Nx.from_binary(:u8)
       |> Nx.reshape({height, width, 3})
+      |> Nx.pad(@pad_value, [
+        {floor(h_pad), ceil(h_pad), 0},
+        {floor(w_pad), ceil(w_pad), 0},
+        {0, 0, 0}
+      ])
 
     detections =
       state.model
@@ -97,6 +128,8 @@ defmodule ExNVR.AI.ObjectDetector do
       "inference_stats",
       {:inference_time, state.device_id, inference_time}
     )
+
+    # IO.inspect(detections)
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
