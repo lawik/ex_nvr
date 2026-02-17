@@ -108,7 +108,6 @@ defmodule ExNVRWeb.DeviceListLive do
                 If you want to delete them delete the following folders: <br />
                 <div class="bg-white dark:bg-gray-400 rounded-md p-4 mt-2">
                   <code class="text-gray-800 font-bold">
-                    {Device.base_dir(device)}
                   </code>
                 </div>
               </h3>

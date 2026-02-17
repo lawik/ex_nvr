@@ -88,7 +88,8 @@ defmodule ExNVR.MixProject do
       {:yolo, "~> 0.2.0"},
       # I'm using EXLA as Nx backend
       # Nx is mostly used for pre/post processing
-      {:exla, "~> 0.9.2"},
+      {:exla, "~> 0.10"},
+      {:emlx, github: "elixir-nx/emlx", branch: "main"},
       # evision for image processing (you can use :image instead)
       # {:evision, "~> 0.2.0"},
       {:live_debugger, "~> 0.3.0", only: [:dev, :test]},

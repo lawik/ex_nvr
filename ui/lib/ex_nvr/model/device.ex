@@ -321,7 +321,6 @@ defmodule ExNVR.Model.Device do
     device
     |> Changeset.cast(params, [:name, :type, :timezone, :state, :vendor, :mac, :url, :model])
     |> Changeset.cast_embed(:credentials)
-    |> Changeset.cast_embed(:storage_config, required: true)
     |> common_config()
   end
 

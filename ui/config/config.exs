@@ -59,18 +59,27 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 config :exqlite, force_build: true
 
 config :ex_nvr, :object_detector,
-  model_path: "/home/lawik/Downloads/yolo11n.onnx",
-  classes_path: "/home/lawik/Downloads/coco_classes.json",
+  model_path: "./yolo11n.onnx",
+  classes_path: "./coco_classes.json",
   prob_threshold: 0.4
 
-config :nx, :default_backend, EXLA.Backend
+# config :nx, :default_backend, EXLA.Backend
+# config :nx, :default_backend, EMLX.Backend
+# config :nx, :default_backend, {EMLX.Backend, device: :cpu}
+config :nx, :default_backend, {EMLX.Backend, device: :gpu}
 
-config :exla, :clients, cuda: [platform: :cuda, preallocate: false]
-#  host: [platform: :host]
+config :exla,
+  clients: [
+    # cuda: [platform: :cuda, preallocate: false]
+    host: [platform: :host]
+  ],
+  preferred_clients: [:host],
+  default_client: :host
 
 config :nx, :default_defn_options, compiler: EXLA
+# config :nx, :default_defn_options, compiler: EMLX
 # TODO: case darwin and coreml (also in object_detector)
-config :ortex, Ortex.Native, features: [:cuda]
+config :ortex, Ortex.Native, features: [:coreml]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
