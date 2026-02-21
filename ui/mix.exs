@@ -86,11 +86,17 @@ defmodule ExNVR.MixProject do
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 11.0"},
       {:yolo, "~> 0.2.0"},
-      {:hailo, github: "underjord/hailo", optional: true},
       # I'm using EXLA as Nx backend
       # Nx is mostly used for pre/post processing
       {:exla, "~> 0.10"}
     ] ++
+      if Mix.target() != :host do
+        [
+          {:hailo, github: "underjord/hailo"}
+        ]
+      else
+        []
+      end ++
       if(:os.type() == {:unix, :darwin},
         do: [{:emlx, github: "elixir-nx/emlx", branch: "main"}],
         else: []
