@@ -142,7 +142,40 @@ defmodule ExNVR.Pipeline.Output.Storage do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{current_segment: segment} = state) do
-    {[], state}
+    state = write_data(state, buffer)
+
+    if Utils.keyframe(buffer) and Segment.duration(segment) >= state.target_duration do
+      {state, discontinuity} =
+        finalize_segment(
+          state,
+          buffer.metadata.timestamp,
+          state.correct_timestamp
+        )
+
+      state =
+        state
+        |> close_file(discontinuity)
+        |> rename_first_segment(segment)
+
+      # in case of time jump, we need to start a new segment
+      start_time =
+        if discontinuity,
+          do: state.current_segment.wallclock_end_date,
+          else: Segment.end_date(state.current_segment)
+
+      state =
+        %{
+          state
+          | current_segment: Segment.new(start_time),
+            first_segment?: false,
+            monotonic_start_time: System.monotonic_time()
+        }
+        |> open_file()
+
+      {[notify_parent: :new_segment], state}
+    else
+      {[], state}
+    end
   end
 
   @impl true

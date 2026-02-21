@@ -52,9 +52,9 @@ defmodule ExNVR.Pipeline.StorageMonitor do
         |> then(&{:noreply, &1})
 
       {:error, reason} ->
-        # Logger.error("Destination '#{state.dir}' is not writable, error: #{inspect(reason)}")
-        # {:ok, dir_timer} = :timer.send_interval(to_timeout(second: 5), :check_dir)
-        # state = notify_parent(%{state | dir_timer: dir_timer}, false)
+        Logger.error("Destination '#{state.dir}' is not writable, error: #{inspect(reason)}")
+        {:ok, dir_timer} = :timer.send_interval(to_timeout(second: 5), :check_dir)
+        state = notify_parent(%{state | dir_timer: dir_timer}, false)
         {:noreply, state}
     end
   end

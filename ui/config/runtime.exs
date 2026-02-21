@@ -5,6 +5,16 @@ config :ex_nvr,
   admin_password: System.get_env("EXNVR_ADMIN_PASSWORD", "P@ssw0rd"),
   download_dir: System.get_env("EXNVR_DOWNLOAD_DIR")
 
+if System.get_env("ENABLE_CUDA") == "true" do
+  config :ex_nvr, :inference, onnx_execution_providers: [:cuda]
+  config :ortex, Ortex.Native, features: [:cuda]
+
+  config :exla,
+    clients: [cuda: [platform: :cuda, preallocate: false]],
+    preferred_clients: [:cuda],
+    default_client: :cuda
+end
+
 if config_env() == :prod do
   config :ex_nvr, hls_directory: System.get_env("EXNVR_HLS_DIRECTORY", "./hls")
 

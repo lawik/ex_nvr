@@ -135,9 +135,6 @@ defmodule ExNVR.Devices do
     File.mkdir_p!(Device.bif_dir(device))
     File.mkdir_p!(Device.bif_thumbnails_dir(device))
     File.mkdir_p!(Device.lpr_thumbnails_dir(device))
-  rescue
-    _ ->
-      :ok
   end
 
   @spec summary :: list()

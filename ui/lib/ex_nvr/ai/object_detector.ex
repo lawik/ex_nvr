@@ -56,8 +56,10 @@ defmodule ExNVR.AI.ObjectDetector do
 
   @impl true
   def handle_setup(_ctx, state) do
+    eps = Application.get_env(:ex_nvr, :inference)[:onnx_execution_providers] || []
+
     load_opts =
-      [model_path: state.model_path, eps: [:coreml]]
+      [model_path: state.model_path, eps: eps]
       |> then(fn o ->
         if state.classes_path, do: Keyword.put(o, :classes_path, state.classes_path), else: o
       end)
@@ -157,7 +159,6 @@ defmodule ExNVR.AI.ObjectDetector do
     )
 
     latency_ms = ts - buffer.metadata.grabbed_at
-    IO.inspect(latency_ms, label: "inference ms")
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,

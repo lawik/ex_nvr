@@ -63,23 +63,24 @@ config :ex_nvr, :object_detector,
   classes_path: "./coco_classes.json",
   prob_threshold: 0.4
 
-# config :nx, :default_backend, EXLA.Backend
-# config :nx, :default_backend, EMLX.Backend
-config :nx, :default_backend, {EMLX.Backend, device: :cpu}
-# config :nx, :default_backend, {EMLX.Backend, device: :gpu}
+case :os.type() do
+  {:unix, :darwin} ->
+    config :nx, :default_backend, {EMLX.Backend, device: :cpu}
+    config :ex_nvr, :inference, onnx_execution_providers: [:coreml]
+    config :ortex, Ortex.Native, features: [:coreml]
+
+  _ ->
+    config :nx, :default_backend, EXLA.Backend
+    config :ex_nvr, :inference, onnx_execution_providers: []
+    config :ortex, Ortex.Native, features: []
+end
 
 config :exla,
-  clients: [
-    # cuda: [platform: :cuda, preallocate: false]
-    host: [platform: :host]
-  ],
+  clients: [host: [platform: :host]],
   preferred_clients: [:host],
   default_client: :host
 
 config :nx, :default_defn_options, compiler: EXLA
-# config :nx, :default_defn_options, compiler: EMLX
-# TODO: case darwin and coreml (also in object_detector)
-config :ortex, Ortex.Native, features: [:coreml]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
