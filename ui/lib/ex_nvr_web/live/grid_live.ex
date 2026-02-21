@@ -10,13 +10,37 @@ defmodule ExNVRWeb.GridLive do
     <div class="bg-black pt-12 grid grid-rows-1 grid-cols-2 gap-2 min-h-screen w-full">
       <div :for={device <- @devices} class="relative">
         <div class="relative">
-            <video phx-update="ignore" id={"player-#{device.id}"} class="webRtcPlayer w-full z-1 hidden" data-device={device.id} data-stream={:high} controls muted autoplay />
-            <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
+          <video
+            phx-update="ignore"
+            id={"player-#{device.id}"}
+            class="webRtcPlayer w-full z-1 hidden"
+            data-device={device.id}
+            data-stream={:high}
+            controls
+            muted
+            autoplay
+          />
+          <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
             <%= with size <- @size[device.id], detections <- @detections[device.id] || [] do %>
-                <Bbox.variants :for={det <- detections} label={det.class} confidence={Float.round(det.prob, 2)} style={"position: absolute; " <> box_style(size, det)} log={det_log(det, @size[device.id], @fps[device.id], @detector_fps[device.id], @inference_time[device.id], @latency[device.id])} />
-                <pre class="text-white bg-black">{ @inference_time[device.id] }ms</pre>
+              <Bbox.variants
+                :for={det <- detections}
+                label={det.class}
+                confidence={Float.round(det.prob, 2)}
+                style={"position: absolute; " <> box_style(size, det)}
+                log={
+                  det_log(
+                    det,
+                    @size[device.id],
+                    @fps[device.id],
+                    @detector_fps[device.id],
+                    @inference_time[device.id],
+                    @latency[device.id]
+                  )
+                }
+              />
+              <pre class="text-white bg-black">{ @inference_time[device.id] }ms</pre>
             <% end %>
-            </div>
+          </div>
         </div>
       </div>
       <script>
