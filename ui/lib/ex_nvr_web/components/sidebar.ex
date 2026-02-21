@@ -160,6 +160,12 @@ defmodule ExNVRWeb.Components.Sidebar do
             icon: "hero-circle-stack-solid",
             href: ~p"/remote-storages",
             role: :admin
+          },
+          %{
+            label: "Inference",
+            icon: "hero-cpu-chip-solid",
+            href: ~p"/inference-pipelines",
+            role: :admin
           }
         ],
         [
@@ -223,6 +229,12 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Remote Storages",
             icon: "hero-circle-stack-solid",
             href: ~p"/remote-storages",
+            role: :admin
+          },
+          %{
+            label: "Inference",
+            icon: "hero-cpu-chip-solid",
+            href: ~p"/inference-pipelines",
             role: :admin
           }
         ],

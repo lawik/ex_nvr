@@ -33,15 +33,24 @@ defmodule ExNVR.Devices do
     end
   end
 
-  @spec update(Device.t(), map()) :: {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
-  def update(%Device{} = device, params) do
+  @spec update(Device.t(), map(), Keyword.t()) :: {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
+  def update(%Device{} = device, params, opts \\ []) do
+    inference_pipeline_ids = Keyword.get(opts, :inference_pipeline_ids)
+
     device
     |> Device.update_changeset(params)
     |> Repo.update()
     |> case do
       {:ok, updated_device} ->
-        start_or_stop_supervisor(device, updated_device)
-        {:ok, updated_device}
+        inference_changed = maybe_update_inference_pipelines(device, inference_pipeline_ids)
+
+        if inference_changed and Device.recording?(updated_device) do
+          Supervisor.restart(updated_device)
+        else
+          start_or_stop_supervisor(device, updated_device)
+        end
+
+        {:ok, Repo.preload(updated_device, :inference_pipelines)}
 
       error ->
         error
@@ -54,13 +63,23 @@ defmodule ExNVR.Devices do
 
   @spec list() :: [Device.t()]
   @spec list(map() | Keyword.t()) :: [Device.t()]
-  def list(params \\ %{}), do: Repo.all(Device.filter(params) |> order_by([d], d.inserted_at))
+  def list(params \\ %{}) do
+    Device.filter(params)
+    |> order_by([d], d.inserted_at)
+    |> Repo.all()
+    |> Repo.preload(:inference_pipelines)
+  end
 
   @spec ip_cameras :: [Device.t()]
   def ip_cameras, do: list(%{type: :ip})
 
   @spec get(binary()) :: Device.t() | nil
-  def get(device_id), do: Repo.get(Device, device_id)
+  def get(device_id) do
+    case Repo.get(Device, device_id) do
+      nil -> nil
+      device -> Repo.preload(device, :inference_pipelines)
+    end
+  end
 
   @spec get!(binary()) :: Device.t()
   def get!(device_id) do
@@ -256,6 +275,20 @@ defmodule ExNVR.Devices do
     if Device.streaming?(device) do
       Pipelines.Main.get_tracks(device)
     end
+  end
+
+  defp maybe_update_inference_pipelines(_device, nil), do: false
+
+  defp maybe_update_inference_pipelines(device, pipeline_ids) do
+    old_ids =
+      ExNVR.Inference.pipelines_for_device(device.id)
+      |> Enum.map(& &1.id)
+      |> Enum.sort()
+
+    new_ids = Enum.sort(pipeline_ids)
+
+    ExNVR.Inference.set_device_pipelines(device.id, pipeline_ids)
+    old_ids != new_ids
   end
 
   defp run_pipeline?, do: ExNVR.Utils.run_main_pipeline?()

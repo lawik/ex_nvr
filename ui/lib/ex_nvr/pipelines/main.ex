@@ -437,41 +437,26 @@ defmodule ExNVR.Pipelines.Main do
         |> via_out(:push_output)
         |> via_in(:video)
         |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
-      ] ++ build_object_detection_spec(state)
+      ] ++ build_inference_specs(state)
   end
 
-  defp build_object_detection_spec(%{device: %{inference_config: %{enabled: true} = config}} = state) do
-    detector = detector_child_spec(config, state.device.id)
+  defp build_inference_specs(%{device: device}) do
+    pipelines = device.inference_pipelines || []
 
-    [
-      get_child(:tee)
-      |> via_out(:push_output)
-      |> child({:framepicker, :main}, %Output.Framepicker{
-        device_id: state.device.id,
-        only_keyframes: Map.get(config, :only_keyframes, true)
-      })
-      |> child({:object_detector, :main}, detector)
-    ]
-  end
+    Enum.flat_map(pipelines, fn pipeline ->
+      type =
+        if is_atom(pipeline.type), do: pipeline.type, else: String.to_existing_atom(pipeline.type)
 
-  defp build_object_detection_spec(_state), do: []
+      module = ExNVR.AI.InferencePipelines.module_for(type)
 
-  if Code.ensure_loaded?(Hailo) do
-    defp detector_child_spec(%{pipeline: :hailo_object_detector} = config, device_id) do
-      %ExNVR.AI.HailoObjectDetector{
-        device_id: device_id,
-        model_path: config.model_path,
-        classes_path: config.classes_path
-      }
-    end
-  end
-
-  defp detector_child_spec(config, device_id) do
-    %ExNVR.AI.YoloObjectDetector{
-      device_id: device_id,
-      model_path: config.model_path,
-      classes_path: config.classes_path
-    }
+      if module do
+        module.build_spec(device.id, pipeline.config, pipeline.id)
+      else
+        require Logger
+        Logger.warning("Unknown inference pipeline type: #{pipeline.type}")
+        []
+      end
+    end)
   end
 
   defp build_sub_stream_spec(%{device: device} = state) do

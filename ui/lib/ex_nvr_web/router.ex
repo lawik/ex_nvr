@@ -152,6 +152,9 @@ defmodule ExNVRWeb.Router do
       ] do
       live "/devices/:id", DeviceLive, :edit
 
+      live "/inference-pipelines", InferencePipelineListLive, :list
+      live "/inference-pipelines/:id", InferencePipelineLive, :edit
+
       live "/remote-storages", RemoteStorageListLive, :list
       live "/remote-storages/:id", RemoteStorageLive, :edit
 

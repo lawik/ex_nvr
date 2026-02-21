@@ -4,7 +4,7 @@ defmodule ExNVRWeb.DeviceLive do
   use ExNVRWeb, :live_view
 
   alias ExMP4.Reader
-  alias ExNVR.{Devices, RemoteStorages}
+  alias ExNVR.{Devices, Inference, RemoteStorages}
   alias ExNVR.Model.Device
 
   def mount(%{"id" => "new"}, _session, socket) do
@@ -20,7 +20,9 @@ defmodule ExNVRWeb.DeviceLive do
        device_form: to_form(changeset),
        device_type: "ip",
        override_on_full_disk: false,
-       remote_storages: list_remote_storages()
+       remote_storages: list_remote_storages(),
+       inference_pipelines: Inference.list_pipelines(),
+       selected_pipeline_ids: []
      )
      |> allow_upload(:file_to_upload,
        accept: ~w(video/mp4),
@@ -32,13 +34,18 @@ defmodule ExNVRWeb.DeviceLive do
     device = Devices.get!(device_id)
     device_params = get_device_params(socket.assigns.flash) |> Map.delete(:name)
 
+    selected_pipeline_ids =
+      Inference.pipelines_for_device(device.id) |> Enum.map(& &1.id)
+
     {:ok,
      assign(socket,
        device: device,
        disks_data: get_disks_data(),
        device_form: to_form(Devices.change_device_update(device, device_params)),
        device_type: Atom.to_string(device.type),
-       remote_storages: list_remote_storages()
+       remote_storages: list_remote_storages(),
+       inference_pipelines: Inference.list_pipelines(),
+       selected_pipeline_ids: selected_pipeline_ids
      )}
   end
 
@@ -61,12 +68,17 @@ defmodule ExNVRWeb.DeviceLive do
     |> then(&{:noreply, &1})
   end
 
-  def handle_event("save_device", %{"device" => device_params}, socket) do
+  def handle_event("save_device", %{"device" => device_params} = params, socket) do
     device = socket.assigns.device
     device_params = decode_schedule(device_params)
 
+    pipeline_ids =
+      params
+      |> Map.get("inference_pipeline_ids", [])
+      |> Enum.reject(&(&1 == ""))
+
     if device.id,
-      do: do_update_device(socket, device, device_params),
+      do: do_update_device(socket, device, device_params, pipeline_ids),
       else: do_save_device(socket, device_params)
   end
 
@@ -140,8 +152,8 @@ defmodule ExNVRWeb.DeviceLive do
     end)
   end
 
-  defp do_update_device(socket, device, device_params) do
-    case Devices.update(device, device_params) do
+  defp do_update_device(socket, device, device_params, pipeline_ids) do
+    case Devices.update(device, device_params, inference_pipeline_ids: pipeline_ids) do
       {:ok, _updated_device} ->
         info = "Device updated successfully"
 

@@ -1,11 +1,11 @@
 defmodule ExNVR.Pipeline.Output.Framepicker do
   @moduledoc """
-  Extract frames from stream. The element will only decode keyframes.
+  Extract frames from stream with backpressure support.
 
-  Holds on to the latest decoded frame and only forwards it when the
-  downstream element (e.g. YoloObjectDetector) signals demand. This ensures the
-  detector always receives the most recent frame rather than working
-  through a stale queue.
+  Stores only the latest eligible raw buffer. When the downstream element
+  (e.g. an object detector) sends demand, the most recent buffer is
+  decoded and forwarded. This avoids wasting CPU on decoding frames
+  that will be replaced before inference gets to them.
   """
 
   use Membrane.Filter
@@ -45,6 +45,21 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
       default: 640,
       description: "The width of the generated frame"
     ],
+    frame_height: [
+      spec: non_neg_integer() | nil,
+      default: nil,
+      description: "The height of the generated frame. When nil, matches frame_width."
+    ],
+    pad: [
+      spec: boolean(),
+      default: false,
+      description: "When true, pad the frame to fit the target dimensions (letterbox)."
+    ],
+    out_format: [
+      spec: :rgb24 | :bgr24 | nil,
+      default: :rgb24,
+      description: "Output pixel format for the decoded frame."
+    ],
     device_id: [
       spec: binary() | nil,
       default: nil,
@@ -63,12 +78,13 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
       options
       |> Map.from_struct()
       |> Map.merge(%{
-        frame_height: nil,
         decoder: nil,
-        last_buffer_pts: nil,
-        latest_frame: nil,
+        orig_width: nil,
+        orig_height: nil,
+        pending_buffer: nil,
         demand: 0
       })
+      |> Map.update!(:frame_height, fn h -> h || options.frame_width end)
       |> Map.put(:ts, System.monotonic_time(:millisecond))
 
     Process.set_label(:framepicker)
@@ -83,27 +99,24 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
     if is_nil(old_stream_format) or old_stream_format != format do
       codec = if is_struct(format, H264), do: :h264, else: :hevc
 
-      out_height = div(state.frame_width * format.height, format.width)
-      out_height = out_height - rem(out_height, 2)
-      # out_height = 640
-
       decoder =
         Decoder.new(codec,
-          out_height: out_height,
           out_width: state.frame_width,
-          out_format: :rgb24
+          out_height: state.frame_height,
+          out_format: state.out_format,
+          pad: state.pad
         )
 
       raw_video_format = %RawVideo{
         width: state.frame_width,
-        height: out_height,
+        height: state.frame_height,
         framerate: nil,
         pixel_format: :RGB,
         aligned: true
       }
 
       {[stream_format: {:output, raw_video_format}],
-       %{state | frame_height: out_height, decoder: decoder}}
+       %{state | decoder: decoder, orig_width: format.width, orig_height: format.height}}
     else
       {[], state}
     end
@@ -112,12 +125,12 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{only_keyframes: true} = state)
       when ExNVR.Utils.keyframe(buffer) do
-    do_decode(buffer, state)
+    maybe_send(%{state | pending_buffer: buffer})
   end
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, %{only_keyframes: false} = state) do
-    do_decode(buffer, state)
+    maybe_send(%{state | pending_buffer: buffer})
   end
 
   @impl true
@@ -125,11 +138,17 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
 
   @impl true
   def handle_demand(:output, size, :buffers, _ctx, state) do
-    state = %{state | demand: state.demand + size}
-    maybe_send_frame(state)
+    maybe_send(%{state | demand: state.demand + size})
   end
 
-  defp do_decode(buffer, state) do
+  defp maybe_send(%{pending_buffer: buffer, demand: demand} = state)
+       when buffer != nil and demand > 0 do
+    decode_and_send(buffer, %{state | pending_buffer: nil, demand: demand - 1})
+  end
+
+  defp maybe_send(state), do: {[], state}
+
+  defp decode_and_send(buffer, state) do
     with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)) do
       ts = System.monotonic_time(:millisecond)
       diff = ts - state.ts
@@ -143,24 +162,20 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         )
       end
 
-      state = %{
-        state
-        | latest_frame: %Buffer{payload: decoded.data, metadata: %{grabbed_at: ts}},
-          ts: ts
+      frame = %Buffer{
+        payload: decoded.data,
+        metadata: %{
+          grabbed_at: ts,
+          orig_width: state.orig_width,
+          orig_height: state.orig_height
+        }
       }
 
-      maybe_send_frame(state)
+      {[buffer: {:output, frame}], %{state | ts: ts}}
     else
       error ->
         Membrane.Logger.error("Failed to pick frame: #{inspect(error)}")
         {[], state}
     end
   end
-
-  defp maybe_send_frame(%{latest_frame: frame, demand: demand} = state)
-       when frame != nil and demand > 0 do
-    {[buffer: {:output, frame}], %{state | latest_frame: nil, demand: demand - 1}}
-  end
-
-  defp maybe_send_frame(state), do: {[], state}
 end
