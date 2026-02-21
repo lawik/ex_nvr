@@ -86,6 +86,7 @@ defmodule ExNVR.MixProject do
       {:live_vue, "~> 0.5.7"},
       {:sentry, "~> 11.0"},
       {:yolo, "~> 0.2.0"},
+      {:hailo, github: "underjord/hailo", optional: true},
       # I'm using EXLA as Nx backend
       # Nx is mostly used for pre/post processing
       {:exla, "~> 0.10"}
