@@ -122,9 +122,12 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
     end
   end
 
+  def handle_stream_format(any, format, _ctx, state) do
+    {[], state}
+  end
+
   @impl true
-  def handle_buffer(:input, buffer, _ctx, %{only_keyframes: true} = state)
-      when ExNVR.Utils.keyframe(buffer) do
+  def handle_buffer(:input, buffer, _ctx, %{} = state) when ExNVR.Utils.keyframe(buffer) do
     maybe_send(%{state | pending_buffer: buffer})
   end
 
@@ -143,12 +146,14 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
 
   defp maybe_send(%{pending_buffer: buffer, demand: demand} = state)
        when buffer != nil and demand > 0 do
-    decode_and_send(buffer, %{state | pending_buffer: nil, demand: demand - 1})
+    decode_and_send(buffer, %{state | pending_buffer: nil})
   end
 
-  defp maybe_send(state), do: {[], state}
+  defp maybe_send(%{demand: demand} = state) do
+    {[], state}
+  end
 
-  defp decode_and_send(buffer, state) do
+  defp decode_and_send(buffer, %{demand: demand} = state) do
     with [decoded] <- Decoder.decode(state.decoder, to_annexb(buffer.payload)) do
       ts = System.monotonic_time(:millisecond)
       diff = ts - state.ts
@@ -171,10 +176,10 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         }
       }
 
-      {[buffer: {:output, frame}], %{state | ts: ts}}
+      {[buffer: {:output, frame}], %{state | ts: ts, demand: demand - 1}}
     else
       error ->
-        Membrane.Logger.error("Failed to pick frame: #{inspect(error)}")
+        Membrane.Logger.warning("Failed to pick frame: #{inspect(error)}")
         {[], state}
     end
   end

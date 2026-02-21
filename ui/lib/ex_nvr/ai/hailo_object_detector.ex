@@ -27,7 +27,9 @@ if Code.ensure_loaded?(Hailo) do
     @model_height 640
 
     def_input_pad(:input,
-      accepted_format: RawVideo
+      accepted_format: RawVideo,
+      demand_unit: :buffers,
+      flow_control: :manual
     )
 
     def_options(
@@ -81,8 +83,13 @@ if Code.ensure_loaded?(Hailo) do
     end
 
     @impl true
+    def handle_playing(_ctx, state) do
+      {[demand: {:input, 1}], state}
+    end
+
+    @impl true
     def handle_stream_format(:input, %RawVideo{} = _format, _ctx, state) do
-      {[], state}
+      {[demand: {:input, 1}], state}
     end
 
     defp calculate_padding(img_w, img_h, target_w, target_h) do
@@ -185,7 +192,7 @@ if Code.ensure_loaded?(Hailo) do
         {:inference_latency, state.device_id, latency_ms}
       )
 
-      {[], %{state | ts: ts}}
+      {[demand: {:input, 1}], %{state | ts: ts}}
     end
 
     defp ensure_model_downloaded!(model_path) do
@@ -258,8 +265,7 @@ if Code.ensure_loaded?(Hailo) do
           name: :model_path,
           type: :string,
           label: "Model path (HEF)",
-          default: "/data/yolov8n.hef",
-          required: false,
+          required: true,
           placeholder: "/data/yolov8n.hef"
         },
         %{
@@ -268,13 +274,13 @@ if Code.ensure_loaded?(Hailo) do
           label: "Classes path",
           default: nil,
           required: false,
-          placeholder: "uses COCO by default"
+          placeholder: "/data/coco_classes.json"
         },
         %{
           name: :prob_threshold,
           type: :float,
           label: "Detection threshold",
-          default: 0.25,
+          default: 0.5,
           required: false,
           placeholder: "0.25"
         },
@@ -318,6 +324,7 @@ if Code.ensure_loaded?(Hailo) do
           pad: true,
           out_format: :rgb24
         })
+        |> via_in(:input, target_queue_size: 1, min_demand_factor: 0.5)
         |> child({:object_detector, pipeline_id}, %__MODULE__{
           device_id: device_id,
           model_path: config["model_path"],

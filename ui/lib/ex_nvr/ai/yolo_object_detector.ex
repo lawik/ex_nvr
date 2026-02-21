@@ -13,7 +13,9 @@ defmodule ExNVR.AI.YoloObjectDetector do
   alias Membrane.RawVideo
 
   def_input_pad(:input,
-    accepted_format: RawVideo
+    accepted_format: RawVideo,
+    demand_unit: :buffers,
+    flow_control: :manual
   )
 
   def_options(
@@ -32,7 +34,7 @@ defmodule ExNVR.AI.YoloObjectDetector do
     ],
     prob_threshold: [
       spec: float(),
-      default: 0.25,
+      default: 0.5,
       description: "Detection probability threshold"
     ]
   )
@@ -71,8 +73,13 @@ defmodule ExNVR.AI.YoloObjectDetector do
   end
 
   @impl true
-  def handle_stream_format(:input, %RawVideo{} = _format, _ctx, state) do
-    {[], state}
+  def handle_playing(_ctx, state) do
+    {[demand: {:input, 1}], state}
+  end
+
+  @impl true
+  def handle_stream_format(:input, format, _ctx, state) do
+    {[demand: {:input, 1}], state}
   end
 
   defp calculate_padding(img_w, img_h, target_w, target_h) do
@@ -94,7 +101,6 @@ defmodule ExNVR.AI.YoloObjectDetector do
 
   @impl true
   def handle_buffer(:input, buffer, _ctx, state) do
-    Membrane.Logger.info("Handling buffer in YOLO...")
     orig_width = buffer.metadata.orig_width
     orig_height = buffer.metadata.orig_height
 
@@ -107,8 +113,6 @@ defmodule ExNVR.AI.YoloObjectDetector do
       buffer.payload
       |> Nx.from_binary(:u8)
       |> Nx.reshape({@model_height, @model_width, 3})
-
-    Membrane.Logger.info("Detecting...")
 
     detections =
       state.model
@@ -163,30 +167,7 @@ defmodule ExNVR.AI.YoloObjectDetector do
       {:inference_latency, state.device_id, latency_ms}
     )
 
-    {[], %{state | ts: ts}}
-  end
-
-  def fake do
-    Phoenix.PubSub.broadcast(
-      ExNVR.PubSub,
-      "detections",
-      {:detections, "fake",
-       [
-         %{
-           class: "person",
-           prob: 0.57,
-           bbox: %{h: 126, w: 70, cx: 700, cy: 570},
-           class_idx: 0
-         },
-         %{
-           class: "bicycle",
-           prob: 0.61,
-           bbox: %{h: 102, w: 71, cx: 726, cy: 738},
-           class_idx: 1
-         },
-         %{class: "car", prob: 0.62, bbox: %{h: 87, w: 102, cx: 1039, cy: 268}, class_idx: 2}
-       ]}
-    )
+    {[demand: {:input, 1}], %{state | ts: ts}}
   end
 
   # --- InferencePipeline behaviour callbacks ---
@@ -268,6 +249,7 @@ defmodule ExNVR.AI.YoloObjectDetector do
         pad: true,
         out_format: :rgb24
       })
+      |> via_in(:input, target_queue_size: 1, min_demand_factor: 0.5)
       |> child({:object_detector, pipeline_id}, %__MODULE__{
         device_id: device_id,
         model_path: config["model_path"],

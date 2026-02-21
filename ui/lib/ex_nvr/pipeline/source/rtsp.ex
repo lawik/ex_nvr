@@ -15,20 +15,24 @@ defmodule ExNVR.Pipeline.Source.RTSP do
   @max_back_off_in_ms :timer.minutes(2)
   @timeout :timer.seconds(10)
 
-  def_output_pad :main_stream_output,
+  def_output_pad(:main_stream_output,
     accepted_format: _any,
     flow_control: :push,
     availability: :on_request
+  )
 
-  def_output_pad :sub_stream_output,
+  def_output_pad(:sub_stream_output,
     accepted_format: _any,
     flow_control: :push,
     availability: :on_request
+  )
 
-  def_options device: [
-                spec: Device.t(),
-                description: "The device struct"
-              ]
+  def_options(
+    device: [
+      spec: Device.t(),
+      description: "The device struct"
+    ]
+  )
 
   defmodule Stream do
     @moduledoc false
