@@ -49,6 +49,11 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
       spec: binary() | nil,
       default: nil,
       description: "Device ID used for broadcasting frames via PubSub"
+    ],
+    only_keyframes: [
+      spec: boolean(),
+      default: true,
+      description: "When true, only decode keyframes. When false, decode every frame."
     ]
   )
 
@@ -105,7 +110,13 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
   end
 
   @impl true
-  def handle_buffer(:input, buffer, _ctx, state) when ExNVR.Utils.keyframe(buffer) do
+  def handle_buffer(:input, buffer, _ctx, %{only_keyframes: true} = state)
+      when ExNVR.Utils.keyframe(buffer) do
+    do_decode(buffer, state)
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, _ctx, %{only_keyframes: false} = state) do
     do_decode(buffer, state)
   end
 

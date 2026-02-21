@@ -38,7 +38,6 @@ defmodule ExNVRWeb.GridLive do
                   )
                 }
               />
-              <pre class="text-white bg-black">{ @inference_time[device.id] }ms</pre>
             <% end %>
           </div>
         </div>

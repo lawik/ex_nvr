@@ -58,20 +58,25 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
 config :exqlite, force_build: true
 
-config :ex_nvr, :object_detector,
-  model_path: "./yolo11n.onnx",
-  classes_path: "./coco_classes.json",
-  prob_threshold: 0.4
-
 case :os.type() do
   {:unix, :darwin} ->
     config :nx, :default_backend, {EMLX.Backend, device: :cpu}
-    config :ex_nvr, :inference, onnx_execution_providers: [:coreml]
+
+    config :ex_nvr, :inference,
+      onnx_execution_providers: [:coreml],
+      model_path: "./yolo11n.onnx",
+      classes_path: "./coco_classes.json"
+
     config :ortex, Ortex.Native, features: [:coreml]
 
   _ ->
     config :nx, :default_backend, EXLA.Backend
-    config :ex_nvr, :inference, onnx_execution_providers: []
+
+    config :ex_nvr, :inference,
+      onnx_execution_providers: [],
+      model_path: "./yolo11n.onnx",
+      classes_path: "./coco_classes.json"
+
     config :ortex, Ortex.Native, features: []
 end
 

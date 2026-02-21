@@ -6,7 +6,7 @@ defmodule ExNVR.Model.Device do
   import Ecto.Query
 
   alias Ecto.Changeset
-  alias ExNVR.Model.Device.{SnapshotConfig, StorageConfig}
+  alias ExNVR.Model.Device.{InferenceConfig, SnapshotConfig, StorageConfig}
   alias ExNVR.Model.Schedule
 
   @states [:stopped, :streaming, :recording, :failed]
@@ -180,6 +180,7 @@ defmodule ExNVR.Model.Device do
     embeds_one :settings, Settings, on_replace: :update
     embeds_one :storage_config, StorageConfig, on_replace: :update
     embeds_one :snapshot_config, SnapshotConfig, on_replace: :update
+    embeds_one :inference_config, InferenceConfig, on_replace: :update
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -221,7 +222,8 @@ defmodule ExNVR.Model.Device do
   @spec config_updated(t(), t()) :: boolean()
   def config_updated(%__MODULE__{} = device_1, %__MODULE__{} = device_2) do
     device_1.stream_config != device_2.stream_config or device_1.settings != device_2.settings or
-      device_1.storage_config != device_2.storage_config
+      device_1.storage_config != device_2.storage_config or
+      device_1.inference_config != device_2.inference_config
   end
 
   @spec has_sub_stream(t()) :: boolean()
@@ -342,6 +344,7 @@ defmodule ExNVR.Model.Device do
     |> Changeset.validate_inclusion(:timezone, Tzdata.zone_list())
     |> Changeset.cast_embed(:settings)
     |> Changeset.cast_embed(:snapshot_config)
+    |> Changeset.cast_embed(:inference_config)
     |> validate_config()
     |> maybe_set_default_settings()
   end

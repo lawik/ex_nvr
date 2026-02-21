@@ -4,9 +4,7 @@ function log(message) {}
 
 window.onload = function (_event) {
   const elements = document.querySelectorAll(".webRtcPlayer");
-  console.log("elements", elements);
   elements.forEach((player) => {
-    console.log("player", player);
     const deviceId = player.dataset.device;
     const stream = player.dataset.stream;
     const pc = new RTCPeerConnection({
