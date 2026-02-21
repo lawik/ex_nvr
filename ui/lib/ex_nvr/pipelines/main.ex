@@ -441,6 +441,8 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_object_detection_spec(%{device: %{inference_config: %{enabled: true} = config}} = state) do
+    detector = detector_child_spec(config, state.device.id)
+
     [
       get_child(:tee)
       |> via_out(:push_output)
@@ -448,15 +450,29 @@ defmodule ExNVR.Pipelines.Main do
         device_id: state.device.id,
         only_keyframes: Map.get(config, :only_keyframes, true)
       })
-      |> child({:object_detector, :main}, %ExNVR.AI.ObjectDetector{
-        device_id: state.device.id,
-        model_path: config.model_path,
-        classes_path: config.classes_path
-      })
+      |> child({:object_detector, :main}, detector)
     ]
   end
 
   defp build_object_detection_spec(_state), do: []
+
+  if Code.ensure_loaded?(Hailo) do
+    defp detector_child_spec(%{pipeline: :hailo_object_detector} = config, device_id) do
+      %ExNVR.AI.HailoObjectDetector{
+        device_id: device_id,
+        model_path: config.model_path,
+        classes_path: config.classes_path
+      }
+    end
+  end
+
+  defp detector_child_spec(config, device_id) do
+    %ExNVR.AI.YoloObjectDetector{
+      device_id: device_id,
+      model_path: config.model_path,
+      classes_path: config.classes_path
+    }
+  end
 
   defp build_sub_stream_spec(%{device: device} = state) do
     [

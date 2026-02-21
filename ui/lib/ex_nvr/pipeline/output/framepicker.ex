@@ -3,7 +3,7 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
   Extract frames from stream. The element will only decode keyframes.
 
   Holds on to the latest decoded frame and only forwards it when the
-  downstream element (ObjectDetector) signals demand. This ensures the
+  downstream element (e.g. YoloObjectDetector) signals demand. This ensures the
   detector always receives the most recent frame rather than working
   through a stale queue.
   """

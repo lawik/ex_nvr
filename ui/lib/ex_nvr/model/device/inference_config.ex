@@ -16,7 +16,9 @@ defmodule ExNVR.Model.Device.InferenceConfig do
   @primary_key false
   embedded_schema do
     field :enabled, :boolean, default: false
-    field :pipeline, Ecto.Enum, values: [:object_detector], default: :object_detector
+    field :pipeline, Ecto.Enum,
+      values: [:yolo_object_detector, :hailo_object_detector],
+      default: :yolo_object_detector
     field :model_path, :string
     field :classes_path, :string
     field :only_keyframes, :boolean, default: true
@@ -40,7 +42,7 @@ defmodule ExNVR.Model.Device.InferenceConfig do
 
   defp validate_config(changeset, _enabled) do
     changeset
-    |> put_change(:pipeline, :object_detector)
+    |> put_change(:pipeline, :yolo_object_detector)
     |> put_change(:model_path, nil)
     |> put_change(:classes_path, nil)
     |> put_change(:only_keyframes, true)
