@@ -42,6 +42,7 @@ defmodule ExNVR.Devices do
     |> Repo.update()
     |> case do
       {:ok, updated_device} ->
+        create_device_directories(updated_device)
         inference_changed = maybe_update_inference_pipelines(device, inference_pipeline_ids)
 
         if inference_changed and Device.recording?(updated_device) do
@@ -148,12 +149,16 @@ defmodule ExNVR.Devices do
 
   @spec create_device_directories(ExNVR.Model.Device.t()) :: :ok
   def create_device_directories(device) do
-    File.mkdir_p!(Device.base_dir(device))
-    File.mkdir_p!(Device.recording_dir(device))
-    File.mkdir_p!(Device.recording_dir(device, :low))
-    File.mkdir_p!(Device.bif_dir(device))
-    File.mkdir_p!(Device.bif_thumbnails_dir(device))
-    File.mkdir_p!(Device.lpr_thumbnails_dir(device))
+    if Device.base_dir(device) do
+      File.mkdir_p!(Device.base_dir(device))
+      File.mkdir_p!(Device.recording_dir(device))
+      File.mkdir_p!(Device.recording_dir(device, :low))
+      File.mkdir_p!(Device.bif_dir(device))
+      File.mkdir_p!(Device.bif_thumbnails_dir(device))
+      File.mkdir_p!(Device.lpr_thumbnails_dir(device))
+    end
+
+    :ok
   end
 
   @spec summary :: list()
