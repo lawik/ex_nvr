@@ -46,7 +46,8 @@ defmodule ExNVR.AI.ObjectDetector do
         model: nil,
         ts: System.monotonic_time(:millisecond),
         width: nil,
-        height: nil
+        height: nil,
+        classes: nil
       })
 
     Process.set_label(:object_detector)
@@ -62,9 +63,17 @@ defmodule ExNVR.AI.ObjectDetector do
         if state.classes_path, do: Keyword.put(o, :classes_path, state.classes_path), else: o
       end)
 
-    model = YOLO.load(load_opts)
+    {:ok, hailo_model} = NxHailo.Hailo.load("#{priv}/yolov8m.hef")
+    # model = YOLO.load(load_opts)
 
-    {[], %{state | model: model}}
+    classes =
+      File.read!(state.classes_path)
+      |> Jason.decode!()
+      |> Enum.with_index()
+      |> Map.new(fn {v, k} -> {k, v} end)
+
+
+    {[], %{state | model: hailo_model, classes: classes}}
   end
 
   @impl true
@@ -96,12 +105,17 @@ defmodule ExNVR.AI.ObjectDetector do
   def handle_buffer(:input, buffer, _ctx, state) do
     width = state.width
     height = state.height
+    input_shape = {height, width}
 
     {ratio, w_pad, h_pad} = calculate_padding(state.width, state.height, 640, 640)
 
+    [%{name: name, shape: model_shape}] = state.model.pipeline.input_vstream_infos
+    [%{name: output_key}] = state.model.pipeline.output_vstream_infos
+
+
     inference_start = System.monotonic_time(:millisecond)
 
-    mat =
+    input_tensor =
       buffer.payload
       |> Nx.from_binary(:u8)
       |> Nx.reshape({height, width, 3})
@@ -111,24 +125,50 @@ defmodule ExNVR.AI.ObjectDetector do
         {0, 0, 0}
       ])
 
-    detections =
-      state.model
-      |> YOLO.detect(mat,
-        prob_threshold: state.prob_threshold,
-        frame_scaler: YOLO.FrameScalers.NxIdentityScaler
+    {:ok, raw_detected_objects} =
+      NxHailo.Hailo.infer(
+        state.model,
+        %{name => input_tensor},
+        NxHailo.Parsers.YoloV8,
+        classes: state.classes,
+        key: output_key
       )
-      |> YOLO.to_detected_objects(state.model.classes)
-      |> Enum.map(fn det ->
-        bbox = det.bbox
+
+
+    detections =
+      raw_detected_objects
+      # filtering
+      |> Enum.reject(& &1.score < 0.5)
+      |> NxHailo.Parsers.YoloV8.postprocess(input_shape)
+
+      # OUTPUT is a list of NxHailo.Parsers.YoloV8.DetectedObject
+      # %NxHailo.Parsers.YoloV8.DetectedObject{
+      #   ymin: remap_coordinate(object.ymin, max_dim, padding_h, input_height),
+      #   ymax: remap_coordinate(object.ymax, max_dim, padding_h, input_height),
+      #   xmin: remap_coordinate(object.xmin, max_dim, padding_w, input_width),
+      #   xmax: remap_coordinate(object.xmax, max_dim, padding_w, input_width),
+      #   score: object.score,
+      #   class_name: object.class_name,
+      #   class_id: object.class_id
+      # }
+
+
+
+
+      |> Enum.map(fn %NxHailo.Parsers.YoloV8.DetectedObject{}=det ->
+        width = det.xmax - det.xmin
+        height = det.ymax - det.ymin
 
         %{
-          det
-          | bbox: %{
-              cx: (bbox.cx - w_pad) / ratio,
-              cy: (bbox.cy - h_pad) / ratio,
-              w: bbox.w / ratio,
-              h: bbox.h / ratio
-            }
+          bbox: %{
+            cx: round(det.xmin + width/2),
+            cy: round(det.ymin + height/2),
+            w: width,
+            h: height
+          },
+          score: det.score,
+          class_name: det.class_name,
+          class_idx: det.class_id
         }
       end)
 
