@@ -31,11 +31,6 @@ defmodule ExNVR.Inference.Pipeline do
     field :type, Ecto.Enum, values: @available_types
     field :config, :map, default: %{}
 
-    many_to_many :devices, ExNVR.Model.Device,
-      join_through: "devices_inference_pipelines",
-      join_keys: [inference_pipeline_id: :id, device_id: :id],
-      on_replace: :delete
-
     timestamps(type: :utc_datetime_usec)
   end
 

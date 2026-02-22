@@ -181,9 +181,9 @@ defmodule ExNVR.Model.Device do
     embeds_one :storage_config, StorageConfig, on_replace: :update
     embeds_one :snapshot_config, SnapshotConfig, on_replace: :update
 
-    many_to_many :inference_pipelines, ExNVR.Inference.Pipeline,
-      join_through: "devices_inference_pipelines",
-      join_keys: [device_id: :id, inference_pipeline_id: :id],
+    many_to_many :event_configs, ExNVR.Events.EventConfig,
+      join_through: "devices_event_configs",
+      join_keys: [device_id: :id, event_config_id: :id],
       on_replace: :delete
 
     timestamps(type: :utc_datetime_usec)

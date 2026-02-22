@@ -14,6 +14,7 @@ if Code.ensure_loaded?(Hailo) do
     """
 
     @behaviour ExNVR.AI.InferencePipeline
+    @behaviour ExNVR.Events.EventSource
 
     use Membrane.Sink
 
@@ -307,6 +308,59 @@ if Code.ensure_loaded?(Hailo) do
            ExNVR.AI.InferencePipeline.parse_float(config["prob_threshold"], 0.25),
          "only_keyframes" => ExNVR.AI.InferencePipeline.parse_bool(config["only_keyframes"], true)
        }}
+    end
+
+    # --- EventSource behaviour callbacks ---
+
+    @impl ExNVR.Events.EventSource
+    def event_definitions do
+      %{"detections" => %{"objects_detected" => &objects_detected?/3}}
+    end
+
+    @impl ExNVR.Events.EventSource
+    def event_config_fields do
+      [
+        %{
+          name: :classes,
+          type: :multi_select,
+          label: "Trigger on classes",
+          required: false,
+          default: [],
+          placeholder: nil,
+          options: available_classes() |> Enum.map(&{&1, &1})
+        }
+      ]
+    end
+
+    @impl ExNVR.Events.EventSource
+    def validate_event_config(config) do
+      config = for {k, v} <- config, into: %{}, do: {to_string(k), v}
+      classes = config["classes"] || []
+
+      classes =
+        cond do
+          is_list(classes) -> classes
+          is_binary(classes) -> String.split(classes, ",", trim: true) |> Enum.map(&String.trim/1)
+          true -> []
+        end
+
+      {:ok, %{"classes" => classes}}
+    end
+
+    @doc "Returns the list of available detection classes."
+    @spec available_classes() :: [String.t()]
+    def available_classes do
+      default_classes() |> Map.values()
+    end
+
+    defp objects_detected?({:detections, _device_id, _dims, detections}, config, _device) do
+      classes = config["classes"] || []
+
+      if classes == [] do
+        detections != []
+      else
+        Enum.any?(detections, fn det -> det.class in classes end)
+      end
     end
 
     @impl ExNVR.AI.InferencePipeline

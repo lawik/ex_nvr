@@ -5,6 +5,7 @@ defmodule ExNVR.AI.YoloObjectDetector do
   """
 
   @behaviour ExNVR.AI.InferencePipeline
+  @behaviour ExNVR.Events.EventSource
 
   use Membrane.Sink
 
@@ -233,6 +234,69 @@ defmodule ExNVR.AI.YoloObjectDetector do
        }}
     end
   end
+
+  # --- EventSource behaviour callbacks ---
+
+  @impl ExNVR.Events.EventSource
+  def event_definitions do
+    %{"detections" => %{"objects_detected" => &objects_detected?/3}}
+  end
+
+  @impl ExNVR.Events.EventSource
+  def event_config_fields do
+    [
+      %{
+        name: :classes,
+        type: :multi_select,
+        label: "Trigger on classes",
+        required: false,
+        default: [],
+        placeholder: nil,
+        options: available_classes() |> Enum.map(&{&1, &1})
+      }
+    ]
+  end
+
+  @impl ExNVR.Events.EventSource
+  def validate_event_config(config) do
+    config = for {k, v} <- config, into: %{}, do: {to_string(k), v}
+    classes = config["classes"] || []
+
+    classes =
+      cond do
+        is_list(classes) -> classes
+        is_binary(classes) -> String.split(classes, ",", trim: true) |> Enum.map(&String.trim/1)
+        true -> []
+      end
+
+    {:ok, %{"classes" => classes}}
+  end
+
+  @doc "Returns the list of available detection classes."
+  @spec available_classes() :: [String.t()]
+  def available_classes do
+    ~w(person bicycle car motorcycle airplane bus train truck boat traffic\ light
+       fire\ hydrant stop\ sign parking\ meter bench bird cat dog horse sheep cow
+       elephant bear zebra giraffe backpack umbrella handbag tie suitcase frisbee
+       skis snowboard sports\ ball kite baseball\ bat baseball\ glove skateboard
+       surfboard tennis\ racket bottle wine\ glass cup fork knife spoon bowl banana
+       apple sandwich orange broccoli carrot hot\ dog pizza donut cake chair couch
+       potted\ plant bed dining\ table toilet tv laptop mouse remote keyboard
+       cell\ phone microwave oven toaster sink refrigerator book clock vase scissors
+       teddy\ bear hair\ drier toothbrush)
+  end
+
+  defp objects_detected?({:detections, device_id, _dims, detections}, config, %{id: device_id}) do
+    classes = config["classes"] || []
+
+    if classes == [] do
+      detections != []
+    else
+      Enum.any?(detections, fn det -> det.class in classes end)
+    end
+  end
+
+  defp objects_detected?(_msg, _config, _device), do: false
 
   @impl ExNVR.AI.InferencePipeline
   def build_spec(device_id, config, pipeline_id) do

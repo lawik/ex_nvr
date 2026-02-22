@@ -5,7 +5,7 @@ defmodule ExNVR.Inference do
 
   import Ecto.Query
 
-  alias ExNVR.Inference.{DevicePipeline, Pipeline}
+  alias ExNVR.Inference.Pipeline
   alias ExNVR.Repo
 
   # --- Pipeline CRUD ---
@@ -53,44 +53,6 @@ defmodule ExNVR.Inference do
   @spec change_pipeline_update(Pipeline.t(), map()) :: Ecto.Changeset.t()
   def change_pipeline_update(%Pipeline{} = pipeline, attrs \\ %{}) do
     Pipeline.update_changeset(pipeline, attrs)
-  end
-
-  # --- Device association ---
-
-  @spec pipelines_for_device(binary()) :: [Pipeline.t()]
-  def pipelines_for_device(device_id) do
-    from(p in Pipeline,
-      join: dp in DevicePipeline,
-      on: dp.inference_pipeline_id == p.id,
-      where: dp.device_id == ^device_id
-    )
-    |> Repo.all()
-  end
-
-  @spec set_device_pipelines(binary(), [binary()]) :: :ok
-  def set_device_pipelines(device_id, pipeline_ids) do
-    Repo.transaction(fn ->
-      from(dp in DevicePipeline, where: dp.device_id == ^device_id)
-      |> Repo.delete_all()
-
-      now = DateTime.utc_now() |> DateTime.truncate(:microsecond)
-
-      entries =
-        Enum.map(pipeline_ids, fn pid ->
-          %{
-            device_id: device_id,
-            inference_pipeline_id: pid,
-            inserted_at: now,
-            updated_at: now
-          }
-        end)
-
-      if entries != [] do
-        Repo.insert_all(DevicePipeline, entries)
-      end
-    end)
-
-    :ok
   end
 
   @spec pipeline_options() :: [{String.t(), binary()}]

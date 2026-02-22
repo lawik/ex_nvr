@@ -22,6 +22,7 @@ defmodule ExNVRWeb.Application do
         {Task.Supervisor, name: ExNVR.TaskSupervisor},
         {ExNVR.SystemStatus, []},
         {DynamicSupervisor, [name: ExNVR.PipelineSupervisor, strategy: :one_for_one]},
+        {DynamicSupervisor, [name: ExNVR.Events.DispatcherSupervisor, strategy: :one_for_one]},
         ExNVRWeb.Telemetry,
         ExNVRWeb.Endpoint,
         ExNVRWeb.PromEx,

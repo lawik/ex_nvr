@@ -40,8 +40,10 @@ defmodule ExNVR.Pipelines.Main do
   require Membrane.Logger
 
   alias __MODULE__.State
-  alias ExNVR.{Devices, Recordings, Utils}
-  alias ExNVR.Elements.VideoStreamStatReporter
+  alias ExNVR.{Devices, Events, Recordings, Utils}
+  alias ExNVR.Elements.{VideoBufferer, VideoStreamStatReporter}
+  alias ExNVR.Events.{EventSourceDispatcher, EventSources}
+  alias ExNVR.Events.Targets.TriggerRecording
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source, StorageMonitor}
 
@@ -280,7 +282,8 @@ defmodule ExNVR.Pipelines.Main do
     childs_to_delete = [
       {:thumbnailer, :sub_stream},
       {:storage, :sub_stream},
-      {:storage, :main_stream}
+      {:storage, :main_stream},
+      {:video_bufferer, :main_stream}
     ]
 
     state = %{maybe_update_device_and_report(state, :streaming) | record_main_stream?: false}
@@ -297,6 +300,10 @@ defmodule ExNVR.Pipelines.Main do
   def handle_info({:storage_monitor, :record?, true}, _ctx, state) do
     Membrane.Logger.info("[StorageMonitor] start recording")
     state = %{state | record_main_stream?: state.device.type != :file}
+
+    if Device.recording_mode(state.device) == :on_event do
+      start_event_dispatchers(state.device)
+    end
 
     main_stream_spec = build_main_stream_storage_spec(state)
 
@@ -397,6 +404,24 @@ defmodule ExNVR.Pipelines.Main do
     {[terminate: :normal], state}
   end
 
+  defp start_event_dispatchers(device) do
+    source_configs = Events.enabled_event_source_configs_for_device(device.id)
+
+    for config <- source_configs do
+      source_module = EventSources.module_for(config.source_type)
+
+      if source_module do
+        DynamicSupervisor.start_child(
+          ExNVR.Events.DispatcherSupervisor,
+          {EventSourceDispatcher,
+           device: device,
+           source_module: source_module,
+           config: config.config}
+        )
+      end
+    end
+  end
+
   defp build_device_spec(%{type: :file} = device) do
     [child(:file_source, %ExNVR.Pipeline.Source.File{device: device})]
   end
@@ -441,7 +466,7 @@ defmodule ExNVR.Pipelines.Main do
   end
 
   defp build_inference_specs(%{device: device}) do
-    pipelines = device.inference_pipelines || []
+    pipelines = Events.inference_pipelines_for_device(device.id)
 
     Enum.flat_map(pipelines, fn pipeline ->
       type =
@@ -482,15 +507,41 @@ defmodule ExNVR.Pipelines.Main do
   defp build_main_stream_storage_spec(%{record_main_stream?: false}), do: []
 
   defp build_main_stream_storage_spec(state) do
-    [
-      get_child(:tee)
-      |> via_out(:push_output)
-      |> child({:storage, :main_stream}, %Output.Storage{
-        device: state.device,
-        target_segment_duration: state.segment_duration,
-        correct_timestamp: true
-      })
-    ]
+    if Device.recording_mode(state.device) == :on_event do
+      bufferer_opts = video_bufferer_opts(state.device)
+
+      [
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> child({:video_bufferer, :main_stream}, %VideoBufferer{
+          device_id: state.device.id,
+          limit: bufferer_opts[:limit] || {:keyframes, 3},
+          event_timeout: bufferer_opts[:event_timeout] || 30_000
+        })
+        |> child({:storage, :main_stream}, %Output.Storage{
+          device: state.device,
+          target_segment_duration: state.segment_duration,
+          correct_timestamp: true
+        })
+      ]
+    else
+      [
+        get_child(:tee)
+        |> via_out(:push_output)
+        |> child({:storage, :main_stream}, %Output.Storage{
+          device: state.device,
+          target_segment_duration: state.segment_duration,
+          correct_timestamp: true
+        })
+      ]
+    end
+  end
+
+  defp video_bufferer_opts(device) do
+    case Events.trigger_recording_config(device.id) do
+      nil -> [limit: {:keyframes, 3}, event_timeout: 30_000]
+      config -> TriggerRecording.to_bufferer_opts(config.config)
+    end
   end
 
   defp build_sub_stream_storage_spec(%{record_main_stream?: false}), do: []

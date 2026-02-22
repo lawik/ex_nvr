@@ -236,9 +236,18 @@
                 label="Recording mode"
                 options={[
                   {"Always", "always"},
+                  {"On Event", "on_event"},
                   {"None", "none"}
                 ]}
               />
+              <div :if={@recording_mode == "on_event" && @device.id && @event_configs == []} class="mt-2 mb-4">
+                <p class="text-gray-500 italic text-sm">
+                  No event configs available.
+                  <.link href={~p"/event-configs/new"} class="text-blue-500 underline">
+                    Create one
+                  </.link>
+                </p>
+              </div>
               <div :if={@recording_mode != "none"}>
                 <div class="flex items-center justify-between mt-4 mb-2">
                   <h2>Storage address</h2>
@@ -385,37 +394,36 @@
         </div>
         <div
           :if={(@device_type == "ip" || @device_type == "webcam") && @device.id}
-          id="inference-pipelines"
+          id="event-configs"
           class="flex flex-col"
         >
           <div class="relative flex py-5 items-center">
             <span class="flex-shrink mr-4 text-black dark:text-white">
-              AI Inference Pipelines
+              Event Configs
             </span>
             <div class="flex-grow border-t border-gray-400"></div>
           </div>
           <div class="flex flex-col text-black dark:text-white">
-            <p :if={@inference_pipelines == []} class="text-gray-500 italic">
-              No inference pipelines configured.
-              <.link href={~p"/inference-pipelines/new"} class="text-blue-500 underline">
+            <p :if={@event_configs == []} class="text-gray-500 italic">
+              No event configs available.
+              <.link href={~p"/event-configs/new"} class="text-blue-500 underline">
                 Create one
               </.link>
             </p>
-            <div :for={pipeline <- @inference_pipelines} class="flex items-center gap-2 my-1">
+            <div :for={ec <- @event_configs} class="flex items-center gap-2 my-1">
               <input
                 type="checkbox"
-                name="inference_pipeline_ids[]"
-                value={pipeline.id}
-                checked={pipeline.id in @selected_pipeline_ids}
+                name="event_config_ids[]"
+                value={ec.id}
+                checked={ec.id in @selected_event_config_ids}
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span>{pipeline.name}</span>
-              <span class="text-gray-500 text-sm">({pipeline.type})</span>
+              <span>{ec.name}</span>
             </div>
             <input
-              :if={@inference_pipelines != []}
+              :if={@event_configs != []}
               type="hidden"
-              name="inference_pipeline_ids[]"
+              name="event_config_ids[]"
               value=""
             />
           </div>

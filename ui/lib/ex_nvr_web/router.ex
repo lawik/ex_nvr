@@ -160,6 +160,9 @@ defmodule ExNVRWeb.Router do
 
       live "/onvif-discovery", OnvifDiscoveryLive, :onvif_discovery
 
+      live "/event-configs", EventConfigListLive, :list
+      live "/event-configs/:id", EventConfigLive, :edit
+
       live "/users", UserListLive, :list
       live "/users/:id", UserLive, :edit
     end

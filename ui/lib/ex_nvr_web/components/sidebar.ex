@@ -166,6 +166,12 @@ defmodule ExNVRWeb.Components.Sidebar do
             icon: "hero-cpu-chip-solid",
             href: ~p"/inference-pipelines",
             role: :admin
+          },
+          %{
+            label: "Events",
+            icon: "hero-bolt-solid",
+            href: ~p"/event-configs",
+            role: :admin
           }
         ],
         [
@@ -235,6 +241,12 @@ defmodule ExNVRWeb.Components.Sidebar do
             label: "Inference",
             icon: "hero-cpu-chip-solid",
             href: ~p"/inference-pipelines",
+            role: :admin
+          },
+          %{
+            label: "Events",
+            icon: "hero-bolt-solid",
+            href: ~p"/event-configs",
             role: :admin
           }
         ],

@@ -35,7 +35,7 @@ defmodule ExNVR.Devices do
 
   @spec update(Device.t(), map(), Keyword.t()) :: {:ok, Device.t()} | {:error, Ecto.Changeset.t()}
   def update(%Device{} = device, params, opts \\ []) do
-    inference_pipeline_ids = Keyword.get(opts, :inference_pipeline_ids)
+    event_config_ids = Keyword.get(opts, :event_config_ids)
 
     device
     |> Device.update_changeset(params)
@@ -43,15 +43,15 @@ defmodule ExNVR.Devices do
     |> case do
       {:ok, updated_device} ->
         create_device_directories(updated_device)
-        inference_changed = maybe_update_inference_pipelines(device, inference_pipeline_ids)
+        events_changed = maybe_update_event_configs(device, event_config_ids)
 
-        if inference_changed and Device.recording?(updated_device) do
+        if events_changed and Device.recording?(updated_device) do
           Supervisor.restart(updated_device)
         else
           start_or_stop_supervisor(device, updated_device)
         end
 
-        {:ok, Repo.preload(updated_device, :inference_pipelines)}
+        {:ok, Repo.preload(updated_device, [:event_configs])}
 
       error ->
         error
@@ -68,7 +68,7 @@ defmodule ExNVR.Devices do
     Device.filter(params)
     |> order_by([d], d.inserted_at)
     |> Repo.all()
-    |> Repo.preload(:inference_pipelines)
+    |> Repo.preload([:event_configs])
   end
 
   @spec ip_cameras :: [Device.t()]
@@ -78,7 +78,7 @@ defmodule ExNVR.Devices do
   def get(device_id) do
     case Repo.get(Device, device_id) do
       nil -> nil
-      device -> Repo.preload(device, :inference_pipelines)
+      device -> Repo.preload(device, :event_configs)
     end
   end
 
@@ -282,17 +282,17 @@ defmodule ExNVR.Devices do
     end
   end
 
-  defp maybe_update_inference_pipelines(_device, nil), do: false
+  defp maybe_update_event_configs(_device, nil), do: false
 
-  defp maybe_update_inference_pipelines(device, pipeline_ids) do
+  defp maybe_update_event_configs(device, config_ids) do
     old_ids =
-      ExNVR.Inference.pipelines_for_device(device.id)
+      ExNVR.Events.event_configs_for_device(device.id)
       |> Enum.map(& &1.id)
       |> Enum.sort()
 
-    new_ids = Enum.sort(pipeline_ids)
+    new_ids = Enum.sort(config_ids)
 
-    ExNVR.Inference.set_device_pipelines(device.id, pipeline_ids)
+    ExNVR.Events.set_device_event_configs(device.id, config_ids)
     old_ids != new_ids
   end
 

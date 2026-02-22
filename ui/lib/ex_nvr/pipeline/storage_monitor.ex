@@ -123,6 +123,7 @@ defmodule ExNVR.Pipeline.StorageMonitor do
   end
 
   defp record?(%{recording_mode: :none}), do: false
+  defp record?(%{recording_mode: :on_event}), do: true
   defp record?(%{schedule: nil}), do: true
 
   defp record?(%{schedule: schedule} = state) do
