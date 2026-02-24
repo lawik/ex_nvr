@@ -10,11 +10,13 @@ defmodule ExNVR.AI.InferencePipelines do
   @pipelines (if Code.ensure_loaded?(Hailo) do
                 [
                   {ExNVR.AI.YoloObjectDetector, :yolo_object_detector},
-                  {ExNVR.AI.HailoObjectDetector, :hailo_object_detector}
+                  {ExNVR.AI.HailoObjectDetector, :hailo_object_detector},
+                  {ExNVR.AI.CoralObjectDetector, :coral_object_detector}
                 ]
               else
                 [
-                  {ExNVR.AI.YoloObjectDetector, :yolo_object_detector}
+                  {ExNVR.AI.YoloObjectDetector, :yolo_object_detector},
+                  {ExNVR.AI.CoralObjectDetector, :coral_object_detector}
                 ]
               end)
 

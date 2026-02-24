@@ -20,9 +20,9 @@ defmodule ExNVR.Inference.Pipeline do
         }
 
   @available_types (if Code.ensure_loaded?(Hailo) do
-                      [:yolo_object_detector, :hailo_object_detector]
+                      [:yolo_object_detector, :hailo_object_detector, :coral_object_detector]
                     else
-                      [:yolo_object_detector]
+                      [:yolo_object_detector, :coral_object_detector]
                     end)
 
   @primary_key {:id, :binary_id, autogenerate: true}
