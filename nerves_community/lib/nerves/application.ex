@@ -21,7 +21,7 @@ defmodule ExNVR.Nerves.Application do
     end
   else
     defp target_children() do
-      [{ExNVR.Nerves.BlockManager, []}]
+      [{ExNVR.Nerves.BlockManager, []}, {NervesNode, cookie: :myniceseecretcookie}]
     end
   end
 end

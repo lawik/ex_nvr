@@ -92,12 +92,13 @@ defmodule ExNVR.MixProject do
     ] ++
       if Mix.target() != :host do
         [
-          {:hailo, github: "underjord/hailo"}
+          {:hailo, github: "underjord/hailo"},
+          {:nerves_node, github: "lawik/nerves_node"}
         ]
       else
         []
       end ++
-      if(:os.type() == {:unix, :darwin},
+      if(Mix.target() == :host and :os.type() == {:unix, :darwin},
         do: [{:emlx, github: "elixir-nx/emlx", branch: "main"}],
         else: []
       ) ++
