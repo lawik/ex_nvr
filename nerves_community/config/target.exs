@@ -39,7 +39,7 @@ config :shoehorn, init: [:nerves_runtime, :nerves_pack]
 config :nerves, :erlinit, update_clock: true
 
 config :nerves_ssh,
-  authorized_keys: [],
+  authorized_keys: [Path.expand("~/.ssh/id_rsa.pub")],
   user_passwords: [{"exnvr", "nerves"}]
 
 config :vintage_net,
@@ -95,3 +95,11 @@ config :exla,
   default_client: :host
 
 config :nx, :default_defn_options, compiler: EXLA
+
+#config :mdns_lite,
+#  dns_bridge_enabled: true,
+#  dns_bridge_ip: {127, 0, 0, 53},
+#  dns_bridge_port: 53
+
+#config :vintage_net,
+#  additional_name_servers: [{127, 0, 0, 53}]
