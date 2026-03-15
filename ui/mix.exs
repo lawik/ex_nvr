@@ -84,6 +84,7 @@ defmodule ExNVR.MixProject do
       {:ex_onvif, "~> 0.9.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
+      {:yolo, "~> 0.2.0"},
       {:sentry, "~> 11.0"},
       {:live_debugger, "~> 0.3.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -92,8 +93,17 @@ defmodule ExNVR.MixProject do
       {:mimic, "~> 2.1", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test},
-      {:lazy_html, "~> 0.1.0", only: :test}
-    ]
+      {:lazy_html, "~> 0.1.0", only: :test},
+      # Nx is mostly used for pre/post processing
+      {:exla, "~> 0.10"}
+    ] ++
+      if Mix.target() != :host do
+        [
+          {:hailo, github: "underjord/hailo"}
+        ]
+      else
+        []
+      end
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

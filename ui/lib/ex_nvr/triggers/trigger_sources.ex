@@ -6,7 +6,8 @@ defmodule ExNVR.Triggers.TriggerSources do
   alias ExNVR.Triggers.Sources
 
   @sources [
-    {Sources.Event, :event}
+    {Sources.Event, :event},
+    {Sources.ObjectDetection, :object_detection}
   ]
 
   @spec list() :: [{module(), atom()}]

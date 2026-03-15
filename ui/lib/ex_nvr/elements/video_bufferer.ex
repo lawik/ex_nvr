@@ -107,9 +107,9 @@ defmodule ExNVR.Elements.VideoBufferer do
     {[], evict(state)}
   end
 
-  # --- Event received: flush buffer and switch to forwarding ---
+  # --- Trigger received: flush buffer and switch to forwarding ---
   @impl true
-  def handle_info({:event, _event_name}, _ctx, state) do
+  def handle_info({:trigger, _name}, _ctx, state) do
     state = reset_timeout(state)
 
     case state.mode do
