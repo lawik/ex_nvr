@@ -103,7 +103,11 @@ defmodule ExNVR.MixProject do
         ]
       else
         []
-      end
+      end ++
+      if(:os.type() == {:unix, :darwin},
+        do: [{:emlx, github: "elixir-nx/emlx", branch: "main"}],
+        else: []
+      )
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

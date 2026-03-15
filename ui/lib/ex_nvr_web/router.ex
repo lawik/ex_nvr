@@ -154,6 +154,9 @@ defmodule ExNVRWeb.Router do
       live "/triggers", TriggerConfigListLive, :list
       live "/triggers/:id", TriggerConfigLive, :edit
 
+      live "/inference-pipelines", InferencePipelineListLive, :list
+      live "/inference-pipelines/:id", InferencePipelineLive, :edit
+
       live "/remote-storages", RemoteStorageListLive, :list
       live "/remote-storages/:id", RemoteStorageLive, :edit
 
