@@ -97,14 +97,7 @@ defmodule ExNVR.MixProject do
       # Nx is mostly used for pre/post processing
       {:exla, "~> 0.10"}
     ] ++
-      if Mix.target() != :host do
-        [
-          {:hailo, github: "underjord/hailo"}
-        ]
-      else
-        []
-      end ++
-      if(:os.type() == {:unix, :darwin},
+      if(:os.type() == {:unix, :darwin} and Mix.target() == :host,
         do: [{:emlx, github: "elixir-nx/emlx", branch: "main"}],
         else: []
       )

@@ -78,3 +78,20 @@ config :mdns_lite,
   ]
 
 config :tzdata, data_dir: "/data/elixir_tzdata"
+
+config :ortex, Ortex.Native,
+  target: "aarch64-unknown-linux-gnu",
+  env: [
+    {"CC", ""},
+    {"CFLAGS", ""},
+    {"CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER", "aarch64-nerves-linux-gnu-gcc"}
+  ]
+
+config :nx, :default_backend, EXLA.Backend
+
+config :exla,
+  clients: [host: [platform: :host]],
+  preferred_clients: [:host],
+  default_client: :host
+
+config :nx, :default_defn_options, compiler: EXLA
