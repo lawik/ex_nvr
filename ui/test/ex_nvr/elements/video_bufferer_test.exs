@@ -53,7 +53,7 @@ defmodule ExNVR.Elements.VideoBuffererTest do
   end
 
   defp send_event(state, name \\ "recording_triggered") do
-    VideoBufferer.handle_info({:event, name}, @ctx, state)
+    VideoBufferer.handle_info({:trigger, name}, @ctx, state)
   end
 
   defp send_timeout(state) do

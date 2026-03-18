@@ -51,7 +51,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
   end
 
   defp send_event(state) do
-    VideoBufferer.handle_info({:event, "recording_triggered"}, @ctx, state)
+    VideoBufferer.handle_info({:trigger, "recording_triggered"}, @ctx, state)
   end
 
   defp output_buffers(actions) do
@@ -231,7 +231,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
       pid = start_h264_pipeline(device, topic, limit: {:seconds, 3}, event_timeout: 30_000)
 
       # Fire event — flushes buffer and starts forwarding remaining frames
-      Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:event, "recording_triggered"})
+      Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:trigger, "recording_triggered"})
 
       assert_end_of_stream(pid, :storage, :input, 15_000)
       Pipeline.terminate(pid)
@@ -259,7 +259,7 @@ defmodule ExNVR.Elements.VideoBuffererDurationTest do
 
       pid = start_h264_pipeline(device, topic, limit: {:seconds, 3}, event_timeout: 30_000)
 
-      Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:event, "recording_triggered"})
+      Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:trigger, "recording_triggered"})
 
       assert_end_of_stream(pid, :storage, :input, 15_000)
       Pipeline.terminate(pid)
