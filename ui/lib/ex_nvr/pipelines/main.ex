@@ -301,7 +301,11 @@ defmodule ExNVR.Pipelines.Main do
 
     actions =
       Map.keys(ctx.children)
-      |> Enum.filter(&Enum.member?(static_children, &1))
+      |> Enum.filter(fn
+        {:video_bufferer, _id} -> true
+        {:storage, {:on_event, _id}} -> true
+        child -> Enum.member?(static_children, child)
+      end)
       |> then(&[remove_children: &1])
 
     {actions, state}
