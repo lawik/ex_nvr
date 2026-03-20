@@ -95,12 +95,28 @@ defmodule ExNVR.MixProject do
       {:bypass, "~> 2.1", only: :test},
       {:lazy_html, "~> 0.1.0", only: :test},
       # Nx is mostly used for pre/post processing
-      {:exla, "~> 0.10"}
-    ] ++
-      if(:os.type() == {:unix, :darwin} and Mix.target() == :host,
-        do: [{:emlx, github: "elixir-nx/emlx", branch: "main"}],
-        else: []
-      )
+    ] ++ inference_deps(Mix.target(), :os.type())
+  end
+
+  @exla_version "~> 0.10"
+  defp inference_deps(:host, {:unix, :darwin}) do
+    [
+        {:exla, @exla_version},
+        {:emlx, github: "elixir-nx/emlx", branch: "main"}
+    ]
+  end
+
+  defp inference_deps(:host, _) do
+    [
+        {:exla, @exla_version}
+    ]
+  end
+
+  # Exclude exla from embedded builds
+  defp inference_deps(target, _) when target in [:rpi4, :rpi5] do
+    [
+      {:hailo, github: "underjord/hailo"}
+    ]
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

@@ -87,11 +87,3 @@ config :ortex, Ortex.Native,
     {"CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER", "aarch64-nerves-linux-gnu-gcc"}
   ]
 
-config :nx, :default_backend, EXLA.Backend
-
-config :exla,
-  clients: [host: [platform: :host]],
-  preferred_clients: [:host],
-  default_client: :host
-
-config :nx, :default_defn_options, compiler: EXLA

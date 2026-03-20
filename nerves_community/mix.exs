@@ -45,8 +45,7 @@ defmodule ExNVR.Nerves.MixProject do
       {:hailo,
        github: "underjord/hailo",
        targets: @all_targets,
-       override: true,
-       ref: "d8303fca6cdd372cf89c29a90ba80904a8e5ee64"}
+       override: true}
     ]
   end
 
