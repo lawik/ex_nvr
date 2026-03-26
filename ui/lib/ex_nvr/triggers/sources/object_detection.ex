@@ -64,6 +64,25 @@ defmodule ExNVR.Triggers.Sources.ObjectDetection do
 
   def matches?(_source_config, _message), do: false
 
+  @impl true
+  def filter_message(source_config, {:detections, device_id, dims, detections}) do
+    filtered = filter_classes(source_config["classes"], detections)
+
+    case filtered do
+      [] -> nil
+      kept -> {:detections, device_id, dims, kept}
+    end
+  end
+
+  def filter_message(_source_config, message), do: message
+
+  defp filter_classes([], detections), do: detections
+  defp filter_classes(nil, detections), do: detections
+
+  defp filter_classes(wanted, detections) when is_list(wanted) do
+    Enum.filter(detections, &(&1.class in wanted))
+  end
+
   defp classes_match?([], _detections), do: true
   defp classes_match?(nil, _detections), do: true
 

@@ -195,4 +195,27 @@ defmodule ExNVR.Triggers do
       end
     end)
   end
+
+  @doc """
+  Apply source-level filtering to a message for a matched trigger.
+  Returns the filtered message, or nil if filtering eliminates it entirely.
+  """
+  def filter_message(trigger_config, message) do
+    trigger_config.source_configs
+    |> Enum.reduce(message, fn sc, msg ->
+      if is_nil(msg) do
+        nil
+      else
+        case TriggerSources.module_for(sc.source_type) do
+          nil ->
+            msg
+
+          module ->
+            if function_exported?(module, :filter_message, 2),
+              do: module.filter_message(sc.config, msg),
+              else: msg
+        end
+      end
+    end)
+  end
 end
