@@ -7,7 +7,7 @@ defmodule ExNVRWeb.GridLive do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-black pt-12 grid grid-rows-1 grid-cols-2 gap-2 min-h-screen w-full">
+    <div class="bg-black pt-12 grid grid-rows-1 grid-cols-2 gap-2 items-start min-h-screen w-full">
       <div :for={device <- @devices} class="relative">
         <div class="relative">
           <video

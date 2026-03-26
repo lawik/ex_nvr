@@ -78,7 +78,7 @@ html, body {
     overflow-wrap: anywhere;
 }
 
-#webRtcPlayer {
+#webrtc-fullscreen .webRtcPlayer {
     width: 100vw;
     height: 100vh;
 }
@@ -109,23 +109,6 @@ select {
     padding: 1.125rem;
     border-radius: 0.5rem;
     overflow: hidden
-}
-
-/* Scanline gradient overlays for bbox variants */
-.scanline-cyan {
-    background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.06), transparent);
-}
-.scanline-magenta {
-    background: linear-gradient(to bottom, transparent, rgba(255, 0, 228, 0.06), transparent);
-}
-.scanline-lime {
-    background: linear-gradient(to bottom, transparent, rgba(57, 255, 20, 0.06), transparent);
-}
-.scanline-amber {
-    background: linear-gradient(to bottom, transparent, rgba(255, 174, 0, 0.06), transparent);
-}
-.scanline-red {
-    background: linear-gradient(to bottom, transparent, rgba(255, 32, 64, 0.06), transparent);
 }
 
 /* TODO: Remove when fixed upstream: https://github.com/themesberg/flowbite/issues/1023*/
