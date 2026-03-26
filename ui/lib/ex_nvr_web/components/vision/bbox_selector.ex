@@ -103,9 +103,10 @@ defmodule ExNVRWeb.Components.Vision.BboxSelector do
   defp preview_bbox(%{style_name: :frosted_glass} = assigns) do
     ~H"""
     <div
-      class="bbox-frost"
+      class="bbox-frost-wrap"
       style="position:absolute;top:22%;left:18%;width:64%;height:48%"
     >
+      <div class="bbox-frost"></div>
       <div class="bbox-frost-tag">
         <span class="bbox-frost-status"></span> face · 0.99
       </div>

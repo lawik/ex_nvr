@@ -125,7 +125,8 @@ defmodule ExNVRWeb.Components.Vision.Bbox do
 
   def frosted_glass(assigns) do
     ~H"""
-    <div class="bbox-frost" style={@style}>
+    <div class="bbox-frost-wrap" style={@style}>
+      <div class="bbox-frost"></div>
       <div class="bbox-frost-tag">
         <span class="bbox-frost-status"></span> {@label} · {@confidence}
       </div>

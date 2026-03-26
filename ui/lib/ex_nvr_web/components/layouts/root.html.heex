@@ -176,10 +176,18 @@
       }
 
       /* ── Style 5: Frosted Glass ── */
+      .bbox-frost-wrap {
+        position: absolute;
+      }
       .bbox-frost {
         position: absolute;
+        inset: 0;
         border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.35);
+        border: 1px solid rgba(255,255,255,0.15);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        -webkit-mask-image: radial-gradient(ellipse at center, transparent 30%, black 70%);
+        mask-image: radial-gradient(ellipse at center, transparent 30%, black 70%);
       }
       .bbox-frost-tag {
         position: absolute;
