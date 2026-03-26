@@ -8,12 +8,13 @@ defmodule ExNVR.Triggers.TriggerTarget do
 
   @type config_field :: %{
           name: atom(),
-          type: :string | :integer | :select,
+          type: :string | :integer | :select | :custom,
           label: String.t(),
           required: boolean(),
           default: any(),
           placeholder: String.t() | nil,
-          options: [{String.t(), String.t()}] | nil
+          options: [{String.t(), String.t()}] | nil,
+          component: (map() -> Phoenix.LiveView.Rendered.t()) | nil
         }
 
   @callback label() :: String.t()

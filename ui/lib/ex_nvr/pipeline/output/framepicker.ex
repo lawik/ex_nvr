@@ -178,6 +178,9 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
 
       {[buffer: {:output, frame}], %{state | ts: ts, demand: demand - 1}}
     else
+      [] ->
+        {[], state}
+
       error ->
         Membrane.Logger.warning("Failed to pick frame: #{inspect(error)}")
         {[], state}

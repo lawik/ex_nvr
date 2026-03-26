@@ -192,6 +192,12 @@ defmodule ExNVRWeb.TriggerConfigLive do
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         {field.label}
       </label>
+      <.custom_field
+        :if={field.type == :custom}
+        component={field.component}
+        name={Atom.to_string(field.name)}
+        selected={to_string(field.default)}
+      />
       <select
         :if={field.type == :select}
         name={Atom.to_string(field.name)}
@@ -224,6 +230,16 @@ defmodule ExNVRWeb.TriggerConfigLive do
         class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
       />
     </div>
+    """
+  end
+
+  attr :component, :any, required: true
+  attr :name, :string, required: true
+  attr :selected, :string, required: true
+
+  defp custom_field(assigns) do
+    ~H"""
+    {Phoenix.LiveView.TagEngine.component(@component, Map.take(assigns, [:name, :selected]), {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line})}
     """
   end
 

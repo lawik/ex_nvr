@@ -3,49 +3,39 @@ defmodule ExNVRWeb.GridLive do
 
   alias ExNVR.Devices
   alias ExNVR.Triggers.Targets.GridBboxes
-  alias ExNVRWeb.Components.Future.Bbox
+  alias ExNVRWeb.Components.Vision.Bbox
 
   def render(assigns) do
     ~H"""
     <div class="bg-black pt-12 grid grid-rows-1 grid-cols-2 gap-2 items-start min-h-screen w-full">
       <div :for={device <- @devices} class="relative">
         <div class="relative">
-          <video
+          <div
+            phx-hook="WebRtcPlayer"
             phx-update="ignore"
-            id={"player-#{device.id}"}
-            class="webRtcPlayer w-full z-1 hidden"
+            id={"player-wrap-#{device.id}"}
             data-device={device.id}
             data-stream={:high}
-            controls
-            muted
-            autoplay
-          />
-          <div class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100">
-            <%= with size <- @size[device.id], detections <- @detections[device.id] || [] do %>
-              <Bbox.variants
+            data-token={@user_token}
+          >
+            <video class="w-full z-1 hidden" controls muted autoplay />
+          </div>
+          <div
+            :if={device.id in @active}
+            class="absolute top-0 left-0 right-0 bottom-0 w-full h-full z-100"
+          >
+            <%= with size <- @size[device.id], detections <- @detections[device.id] || [], style <- @style[device.id] || :corner_brackets do %>
+              <Bbox.bbox
                 :for={det <- detections}
+                style_name={style}
                 label={det.class}
                 confidence={Float.round(det.prob, 2)}
                 style={"position: absolute; " <> box_style(size, det)}
-                log={
-                  det_log(
-                    det,
-                    @size[device.id],
-                    @fps[device.id],
-                    @detector_fps[device.id],
-                    @inference_time[device.id],
-                    @latency[device.id]
-                  )
-                }
               />
             <% end %>
           </div>
         </div>
       </div>
-      <script>
-        window.token = "<%= @user_token %>"
-      </script>
-      <script defer phx-track-static type="module" src={static_path(@socket, "/assets/webrtc.js")} />
     </div>
     """
   end
@@ -84,33 +74,12 @@ defmodule ExNVRWeb.GridLive do
     end
   end
 
-  defp det_log(det, size, fps, detector_fps, inference_time, latency) do
-    bbox = det.bbox
-    hex_id = det.class_idx |> Integer.to_string(16) |> String.pad_leading(4, "0")
-    conf = Float.round(det.prob * 100, 1)
-
-    lines = [
-      "OBJ 0x#{hex_id} cls=#{det.class} conf=#{conf}%",
-      "POS cx:#{bbox.cx} cy:#{bbox.cy} w:#{bbox.w} h:#{bbox.h}"
-    ]
-
-    lines = if size, do: lines ++ ["SRC #{size.w}x#{size.h} buf_active"], else: lines
-    lines = if fps, do: lines ++ ["FRMK #{fps}fps pipe_ok"], else: lines
-    lines = if detector_fps, do: lines ++ ["YOLO #{detector_fps}fps model_run"], else: lines
-    lines = if inference_time, do: lines ++ ["INFER t=#{inference_time}ms gpu_exec"], else: lines
-    lines = if latency, do: lines ++ ["LATNC delta=#{latency}ms e2e"], else: lines
-
-    lines
-  end
-
   def mount(_params, _session, socket) do
     socket
     |> assign(detections: %{})
     |> assign(size: %{})
-    |> assign(fps: %{})
-    |> assign(detector_fps: %{})
-    |> assign(latency: %{})
-    |> assign(inference_time: %{})
+    |> assign(style: %{})
+    |> assign(active: MapSet.new())
     |> then(&{:ok, &1})
   end
 
@@ -119,7 +88,6 @@ defmodule ExNVRWeb.GridLive do
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(ExNVR.PubSub, GridBboxes.topic())
-      Phoenix.PubSub.subscribe(ExNVR.PubSub, "inference_stats")
     end
 
     devices = Enum.filter(devices, fn d -> d.state in [:recording, :streaming] end)
@@ -132,32 +100,22 @@ defmodule ExNVRWeb.GridLive do
     |> then(&{:noreply, &1})
   end
 
-  def handle_info({:framepicker_fps, device_id, fps}, socket) do
-    {:noreply, assign(socket, fps: Map.put(socket.assigns.fps, device_id, fps))}
-  end
-
-  def handle_info({:object_detector_fps, device_id, fps}, socket) do
-    {:noreply, assign(socket, detector_fps: Map.put(socket.assigns.detector_fps, device_id, fps))}
-  end
-
-  def handle_info({:inference_latency, device_id, latency_ms}, socket) do
-    {:noreply, assign(socket, latency: Map.put(socket.assigns.latency, device_id, latency_ms))}
-  end
-
-  def handle_info({:inference_time, device_id, ms}, socket) do
-    {:noreply,
-     assign(socket, inference_time: Map.put(socket.assigns.inference_time, device_id, ms))}
-  end
-
-  def handle_info({:grid_detections, device_id, {w, h}, detections}, socket) do
-    detections_map = Map.put(socket.assigns.detections, device_id, detections)
-
+  def handle_info({:grid_detections, device_id, {w, h}, detections, style}, socket) do
     {:noreply,
      assign(socket,
-       detections: detections_map,
-       size: Map.put(socket.assigns.size, device_id, %{w: w, h: h})
+       detections: Map.put(socket.assigns.detections, device_id, detections),
+       size: Map.put(socket.assigns.size, device_id, %{w: w, h: h}),
+       style: Map.put(socket.assigns.style, device_id, style)
      )}
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  def handle_event("webrtc_active", %{"device_id" => device_id}, socket) do
+    {:noreply, assign(socket, active: MapSet.put(socket.assigns.active, device_id))}
+  end
+
+  def handle_event("webrtc_inactive", %{"device_id" => device_id}, socket) do
+    {:noreply, assign(socket, active: MapSet.delete(socket.assigns.active, device_id))}
+  end
 end
