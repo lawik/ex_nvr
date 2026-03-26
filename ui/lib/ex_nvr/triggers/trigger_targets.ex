@@ -8,7 +8,8 @@ defmodule ExNVR.Triggers.TriggerTargets do
   @targets [
     {Targets.LogMessage, :log_message},
     {Targets.DeviceControl, :device_control},
-    {Targets.TriggerRecording, :trigger_recording}
+    {Targets.TriggerRecording, :trigger_recording},
+    {Targets.GridBboxes, :grid_bboxes}
   ]
 
   @spec list() :: [{module(), atom()}]
