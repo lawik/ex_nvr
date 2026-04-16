@@ -304,6 +304,24 @@ select {
   display: inline-block;
 }
 
+/* Grid status bar */
+.grid-status-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.5);
+  font-family: 'DM Mono', ui-monospace, monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  z-index: 200;
+}
+.grid-status-sep {
+  margin: 0 4px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
 /* TODO: Remove when fixed upstream: https://github.com/themesberg/flowbite/issues/1023*/
 input[type="file"] {
     border-width: 1px;

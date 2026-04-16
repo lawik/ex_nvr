@@ -86,6 +86,7 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
       })
       |> Map.update!(:frame_height, fn h -> h || options.frame_width end)
       |> Map.put(:ts, System.monotonic_time(:millisecond))
+      |> Map.put(:stats_ts, System.monotonic_time(:millisecond) - 1000)
 
     Process.set_label(:framepicker)
 
@@ -159,13 +160,18 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
       diff = ts - state.ts
       fps = if diff > 0, do: Float.round(1000 / diff, 2), else: 0.0
 
-      if state.device_id do
-        Phoenix.PubSub.broadcast(
-          ExNVR.PubSub,
-          "inference_stats",
-          {:framepicker_fps, state.device_id, fps}
-        )
-      end
+      stats_ts =
+        if state.device_id && ts - state.stats_ts >= 1000 do
+          Phoenix.PubSub.broadcast(
+            ExNVR.PubSub,
+            "inference_stats",
+            {:framepicker_fps, state.device_id, fps}
+          )
+
+          ts
+        else
+          state.stats_ts
+        end
 
       frame = %Buffer{
         payload: decoded.data,
@@ -176,7 +182,7 @@ defmodule ExNVR.Pipeline.Output.Framepicker do
         }
       }
 
-      {[buffer: {:output, frame}], %{state | ts: ts, demand: demand - 1}}
+      {[buffer: {:output, frame}], %{state | ts: ts, stats_ts: stats_ts, demand: demand - 1}}
     else
       [] ->
         {[], state}

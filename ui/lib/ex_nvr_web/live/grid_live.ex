@@ -34,10 +34,27 @@ defmodule ExNVRWeb.GridLive do
               />
             <% end %>
           </div>
+          <div :if={device.id in @active} class="grid-status-bar">
+            {detection_summary(@detections[device.id] || [])}
+            <span :if={@stats[device.id]} class="grid-status-sep">·</span>
+            <span :if={@stats[device.id]}>
+              {@stats[device.id].fps} fps · inference: {@stats[device.id].inference}ms · latency: {@stats[device.id].latency}ms
+            </span>
+          </div>
         </div>
       </div>
     </div>
     """
+  end
+
+  defp detection_summary([]), do: "no detections"
+
+  defp detection_summary(detections) do
+    detections
+    |> Enum.frequencies_by(& &1.class)
+    |> Enum.map_join(", ", fn {class, count} ->
+      if count > 1, do: "#{count} #{class}", else: class
+    end)
   end
 
   defp box_style(%{w: w, h: h}, %{bbox: bbox}) do
@@ -79,6 +96,7 @@ defmodule ExNVRWeb.GridLive do
     |> assign(detections: %{})
     |> assign(size: %{})
     |> assign(style: %{})
+    |> assign(stats: %{})
     |> assign(active: MapSet.new())
     |> then(&{:ok, &1})
   end
@@ -88,6 +106,7 @@ defmodule ExNVRWeb.GridLive do
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(ExNVR.PubSub, GridBboxes.topic())
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "inference_stats")
     end
 
     devices = Enum.filter(devices, fn d -> d.state in [:recording, :streaming] end)
@@ -107,6 +126,10 @@ defmodule ExNVRWeb.GridLive do
        size: Map.put(socket.assigns.size, device_id, %{w: w, h: h}),
        style: Map.put(socket.assigns.style, device_id, style)
      )}
+  end
+
+  def handle_info({:inference_stats, device_id, stats}, socket) do
+    {:noreply, assign(socket, stats: Map.put(socket.assigns.stats, device_id, stats))}
   end
 
   def handle_info(_msg, socket), do: {:noreply, socket}

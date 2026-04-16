@@ -50,7 +50,8 @@ defmodule ExNVR.Inference.YoloObjectDetector do
       |> Map.from_struct()
       |> Map.merge(%{
         model: nil,
-        ts: System.monotonic_time(:millisecond)
+        ts: System.monotonic_time(:millisecond),
+        stats_ts: System.monotonic_time(:millisecond) - 1000
       })
 
     Process.set_label(:yolo_object_detector)
@@ -126,13 +127,9 @@ defmodule ExNVR.Inference.YoloObjectDetector do
       |> YOLO.to_detected_objects(state.model.classes)
       |> rescale_detections(ratio, w_pad, h_pad)
 
-    inference_time = System.monotonic_time(:millisecond) - inference_start
-
-    Phoenix.PubSub.broadcast(
-      ExNVR.PubSub,
-      "inference_stats",
-      {:inference_time, state.device_id, inference_time}
-    )
+    inference_done_ts = System.monotonic_time(:millisecond)
+    inference_time = inference_done_ts - inference_start
+    latency_ms = inference_done_ts - buffer.metadata.grabbed_at
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
@@ -140,25 +137,24 @@ defmodule ExNVR.Inference.YoloObjectDetector do
       {:detections, state.device_id, {orig_width, orig_height}, detections}
     )
 
-    ts = System.monotonic_time(:millisecond)
-    diff = ts - state.ts
+    diff = inference_done_ts - state.ts
     fps = if diff > 0, do: Float.round(1000 / diff, 2), else: 0.0
 
-    Phoenix.PubSub.broadcast(
-      ExNVR.PubSub,
-      "inference_stats",
-      {:object_detector_fps, state.device_id, fps}
-    )
+    stats_ts =
+      if inference_done_ts - state.stats_ts >= 1000 do
+        Phoenix.PubSub.broadcast(
+          ExNVR.PubSub,
+          "inference_stats",
+          {:inference_stats, state.device_id,
+           %{inference: inference_time, latency: latency_ms, fps: fps}}
+        )
 
-    latency_ms = ts - buffer.metadata.grabbed_at
+        inference_done_ts
+      else
+        state.stats_ts
+      end
 
-    Phoenix.PubSub.broadcast(
-      ExNVR.PubSub,
-      "inference_stats",
-      {:inference_latency, state.device_id, latency_ms}
-    )
-
-    {[demand: {:input, 1}], %{state | ts: ts}}
+    {[demand: {:input, 1}], %{state | ts: inference_done_ts, stats_ts: stats_ts}}
   end
 
   @spec rescale_detections([map()], float(), float(), float()) :: [Detection.t()]
