@@ -33,7 +33,7 @@ defmodule ExNVR.Triggers.Listener do
   end
 
   @impl true
-  def handle_info({:detections, device_id, _dims, [_ | _]} = trigger, state) do
+  def handle_info({:detections, device_id, _dims, _detections, _gone} = trigger, state) do
     evaluate(device_id, trigger)
     {:noreply, state}
   catch

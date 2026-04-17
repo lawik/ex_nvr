@@ -15,7 +15,7 @@ defmodule ExNVRWeb.GridLive do
             phx-update="ignore"
             id={"player-wrap-#{device.id}"}
             data-device={device.id}
-            data-stream={:high}
+            data-stream={:low}
             data-token={@user_token}
           >
             <video class="w-full z-1 hidden" controls muted autoplay />
@@ -92,31 +92,26 @@ defmodule ExNVRWeb.GridLive do
   end
 
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, GridBboxes.topic())
+      Phoenix.PubSub.subscribe(ExNVR.PubSub, "inference_stats")
+    end
+
+    devices =
+      Devices.list()
+      |> Enum.filter(fn d -> d.state in [:recording, :streaming] end)
+
+    token = Phoenix.Token.sign(socket, "user socket", socket.assigns.current_user.id)
+
     socket
     |> assign(detections: %{})
     |> assign(size: %{})
     |> assign(style: %{})
     |> assign(stats: %{})
     |> assign(active: MapSet.new())
-    |> then(&{:ok, &1})
-  end
-
-  def handle_params(_params, _uri, socket) do
-    devices = Devices.list()
-
-    if connected?(socket) do
-      Phoenix.PubSub.subscribe(ExNVR.PubSub, GridBboxes.topic())
-      Phoenix.PubSub.subscribe(ExNVR.PubSub, "inference_stats")
-    end
-
-    devices = Enum.filter(devices, fn d -> d.state in [:recording, :streaming] end)
-
-    token = Phoenix.Token.sign(socket, "user socket", socket.assigns.current_user.id)
-
-    socket
     |> assign(devices: devices)
     |> assign(user_token: token)
-    |> then(&{:noreply, &1})
+    |> then(&{:ok, &1})
   end
 
   def handle_info({:grid_detections, device_id, {w, h}, detections, style}, socket) do

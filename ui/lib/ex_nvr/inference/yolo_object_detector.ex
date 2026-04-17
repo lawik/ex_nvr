@@ -50,6 +50,7 @@ defmodule ExNVR.Inference.YoloObjectDetector do
       |> Map.from_struct()
       |> Map.merge(%{
         model: nil,
+        prev_classes: MapSet.new(),
         ts: System.monotonic_time(:millisecond),
         stats_ts: System.monotonic_time(:millisecond) - 1000
       })
@@ -131,10 +132,13 @@ defmodule ExNVR.Inference.YoloObjectDetector do
     inference_time = inference_done_ts - inference_start
     latency_ms = inference_done_ts - buffer.metadata.grabbed_at
 
+    current_classes = detections |> Enum.map(& &1.class) |> MapSet.new()
+    gone = MapSet.difference(state.prev_classes, current_classes)
+
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
       "detections",
-      {:detections, state.device_id, {orig_width, orig_height}, detections}
+      {:detections, state.device_id, {orig_width, orig_height}, detections, gone}
     )
 
     diff = inference_done_ts - state.ts
@@ -154,7 +158,8 @@ defmodule ExNVR.Inference.YoloObjectDetector do
         state.stats_ts
       end
 
-    {[demand: {:input, 1}], %{state | ts: inference_done_ts, stats_ts: stats_ts}}
+    {[demand: {:input, 1}],
+     %{state | ts: inference_done_ts, stats_ts: stats_ts, prev_classes: current_classes}}
   end
 
   @spec rescale_detections([map()], float(), float(), float()) :: [Detection.t()]

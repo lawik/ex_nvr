@@ -63,6 +63,7 @@ if Code.ensure_loaded?(Hailo) do
         |> Map.merge(%{
           model: nil,
           classes: nil,
+          prev_classes: MapSet.new(),
           ts: System.monotonic_time(:millisecond),
           stats_ts: System.monotonic_time(:millisecond) - 1000
         })
@@ -150,10 +151,13 @@ if Code.ensure_loaded?(Hailo) do
       inference_done_ts = System.monotonic_time(:millisecond)
       latency_ms = inference_done_ts - buffer.metadata.grabbed_at
 
+      current_classes = detections |> Enum.map(& &1.class) |> MapSet.new()
+      gone = MapSet.difference(state.prev_classes, current_classes)
+
       Phoenix.PubSub.broadcast(
         ExNVR.PubSub,
         "detections",
-        {:detections, state.device_id, {orig_width, orig_height}, detections}
+        {:detections, state.device_id, {orig_width, orig_height}, detections, gone}
       )
 
       diff = inference_done_ts - state.ts
@@ -173,7 +177,8 @@ if Code.ensure_loaded?(Hailo) do
           state.stats_ts
         end
 
-      {[demand: {:input, 1}], %{state | ts: inference_done_ts, stats_ts: stats_ts}}
+      {[demand: {:input, 1}],
+       %{state | ts: inference_done_ts, stats_ts: stats_ts, prev_classes: current_classes}}
     end
 
     @spec to_detections([map()], float(), float(), float()) :: [Detection.t()]

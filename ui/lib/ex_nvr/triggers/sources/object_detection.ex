@@ -58,19 +58,29 @@ defmodule ExNVR.Triggers.Sources.ObjectDetection do
   end
 
   @impl true
-  def matches?(source_config, {:detections, _device_id, _dims, detections}) do
-    detections != [] and classes_match?(source_config["classes"], detections)
+  def matches?(source_config, {:detections, _device_id, _dims, detections, gone}) do
+    wanted = source_config["classes"]
+
+    cond do
+      wanted in [nil, []] -> detections != [] or MapSet.size(gone) > 0
+      classes_match?(wanted, detections) -> true
+      gone_match?(wanted, gone) -> true
+      true -> false
+    end
   end
 
   def matches?(_source_config, _message), do: false
 
   @impl true
-  def filter_message(source_config, {:detections, device_id, dims, detections}) do
-    filtered = filter_classes(source_config["classes"], detections)
+  def filter_message(source_config, {:detections, device_id, dims, detections, gone}) do
+    wanted = source_config["classes"]
+    filtered = filter_classes(wanted, detections)
+    filtered_gone = filter_gone(wanted, gone)
 
-    case filtered do
-      [] -> nil
-      kept -> {:detections, device_id, dims, kept}
+    if filtered == [] and MapSet.size(filtered_gone) == 0 do
+      nil
+    else
+      {:detections, device_id, dims, filtered, filtered_gone}
     end
   end
 
@@ -83,11 +93,22 @@ defmodule ExNVR.Triggers.Sources.ObjectDetection do
     Enum.filter(detections, &(&1.class in wanted))
   end
 
+  defp filter_gone([], gone), do: gone
+  defp filter_gone(nil, gone), do: gone
+
+  defp filter_gone(wanted, gone) when is_list(wanted) do
+    gone |> Enum.filter(&(&1 in wanted)) |> MapSet.new()
+  end
+
   defp classes_match?([], _detections), do: true
   defp classes_match?(nil, _detections), do: true
 
   defp classes_match?(wanted, detections) when is_list(wanted) do
     Enum.any?(detections, &(&1.class in wanted))
+  end
+
+  defp gone_match?(wanted, gone) when is_list(wanted) do
+    Enum.any?(wanted, &MapSet.member?(gone, &1))
   end
 
   defp parse_classes(nil), do: []

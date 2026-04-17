@@ -52,7 +52,7 @@ defmodule ExNVR.Triggers.Sources.EventTest do
 
     test "does not match non-event messages" do
       config = %{"event_type" => "motion_detected"}
-      message = {:detections, "dev-1", {640, 480}, [%{class: "person"}]}
+      message = {:detections, "dev-1", {640, 480}, [%{class: "person"}], MapSet.new()}
       refute Event.matches?(config, message)
     end
   end

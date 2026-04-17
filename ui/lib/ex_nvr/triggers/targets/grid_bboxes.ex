@@ -43,7 +43,7 @@ defmodule ExNVR.Triggers.Targets.GridBboxes do
   end
 
   @impl true
-  def execute({:detections, device_id, dims, detections}, config, _opts) do
+  def execute({:detections, device_id, dims, detections, _gone}, config, _opts) do
     style = String.to_existing_atom(config["style"] || "corner_brackets")
 
     Phoenix.PubSub.broadcast(
