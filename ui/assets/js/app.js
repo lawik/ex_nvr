@@ -24,6 +24,7 @@ import Hls from "hls.js"
 import liveVueApp from "../vue"
 import topbar from "topbar"
 import "flowbite/dist/flowbite.phoenix"
+import WebRtcPlayer from "./webrtc_hook"
 import "../css/app.css"
 
 const toolTipId = document.getElementById('tooltipContent');
@@ -75,6 +76,21 @@ let Hooks = {
         updated() {
             initFlowbite()
 
+        }
+    },
+    WebRtcPlayer,
+    BboxSelector: {
+        mounted() {
+            this.el.querySelectorAll(".bbox-option").forEach(label => {
+                label.addEventListener("click", () => {
+                    this.el.querySelectorAll(".bbox-option").forEach(l => {
+                        l.classList.remove("border-blue-500", "ring-1", "ring-blue-500/20", "selected")
+                        l.classList.add("border-gray-200", "dark:border-gray-700")
+                    })
+                    label.classList.remove("border-gray-200", "dark:border-gray-700")
+                    label.classList.add("border-blue-500", "ring-1", "ring-blue-500/20", "selected")
+                })
+            })
         }
     },
     ...getHooks(liveVueApp)

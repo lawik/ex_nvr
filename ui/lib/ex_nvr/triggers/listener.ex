@@ -33,7 +33,7 @@ defmodule ExNVR.Triggers.Listener do
   end
 
   @impl true
-  def handle_info({:detections, device_id, _dims, [_ | _]} = trigger, state) do
+  def handle_info({:detections, device_id, _dims, _detections, _gone} = trigger, state) do
     evaluate(device_id, trigger)
     {:noreply, state}
   catch
@@ -53,9 +53,15 @@ defmodule ExNVR.Triggers.Listener do
     matching = Triggers.matching_triggers(device_id, trigger)
 
     Enum.each(matching, fn trigger_config ->
-      trigger_config.target_configs
-      |> Enum.filter(& &1.enabled)
-      |> Enum.each(&execute_target(&1, trigger, device_id))
+      case Triggers.filter_message(trigger_config, trigger) do
+        nil ->
+          :ok
+
+        filtered ->
+          trigger_config.target_configs
+          |> Enum.filter(& &1.enabled)
+          |> Enum.each(&execute_target(&1, filtered, device_id))
+      end
     end)
   end
 

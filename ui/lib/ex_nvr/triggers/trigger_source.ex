@@ -20,4 +20,7 @@ defmodule ExNVR.Triggers.TriggerSource do
   @callback config_fields() :: [config_field()]
   @callback validate_config(map()) :: {:ok, map()} | {:error, Keyword.t()}
   @callback matches?(config :: map(), message :: term()) :: boolean()
+  @callback filter_message(config :: map(), message :: term()) :: term()
+
+  @optional_callbacks filter_message: 2
 end

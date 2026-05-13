@@ -63,7 +63,9 @@ if Code.ensure_loaded?(Hailo) do
         |> Map.merge(%{
           model: nil,
           classes: nil,
-          ts: System.monotonic_time(:millisecond)
+          prev_classes: MapSet.new(),
+          ts: System.monotonic_time(:millisecond),
+          stats_ts: System.monotonic_time(:millisecond) - 1000
         })
 
       state = %{state | model_path: state.model_path || @default_model_path}
@@ -146,37 +148,37 @@ if Code.ensure_loaded?(Hailo) do
         |> Enum.filter(fn det -> det.score >= state.prob_threshold end)
         |> to_detections(ratio, w_pad, h_pad)
 
-      Phoenix.PubSub.broadcast(
-        ExNVR.PubSub,
-        "inference_stats",
-        {:inference_time, state.device_id, inference_time}
-      )
+      inference_done_ts = System.monotonic_time(:millisecond)
+      latency_ms = inference_done_ts - buffer.metadata.grabbed_at
+
+      current_classes = detections |> Enum.map(& &1.class) |> MapSet.new()
+      gone = MapSet.difference(state.prev_classes, current_classes)
 
       Phoenix.PubSub.broadcast(
         ExNVR.PubSub,
         "detections",
-        {:detections, state.device_id, {orig_width, orig_height}, detections}
+        {:detections, state.device_id, {orig_width, orig_height}, detections, gone}
       )
 
-      ts = System.monotonic_time(:millisecond)
-      diff = ts - state.ts
+      diff = inference_done_ts - state.ts
       fps = if diff > 0, do: Float.round(1000 / diff, 2), else: 0.0
 
-      Phoenix.PubSub.broadcast(
-        ExNVR.PubSub,
-        "inference_stats",
-        {:object_detector_fps, state.device_id, fps}
-      )
+      stats_ts =
+        if inference_done_ts - state.stats_ts >= 1000 do
+          Phoenix.PubSub.broadcast(
+            ExNVR.PubSub,
+            "inference_stats",
+            {:inference_stats, state.device_id,
+             %{inference: inference_time, latency: latency_ms, fps: fps}}
+          )
 
-      latency_ms = ts - buffer.metadata.grabbed_at
+          inference_done_ts
+        else
+          state.stats_ts
+        end
 
-      Phoenix.PubSub.broadcast(
-        ExNVR.PubSub,
-        "inference_stats",
-        {:inference_latency, state.device_id, latency_ms}
-      )
-
-      {[demand: {:input, 1}], %{state | ts: ts}}
+      {[demand: {:input, 1}],
+       %{state | ts: inference_done_ts, stats_ts: stats_ts, prev_classes: current_classes}}
     end
 
     @spec to_detections([map()], float(), float(), float()) :: [Detection.t()]
