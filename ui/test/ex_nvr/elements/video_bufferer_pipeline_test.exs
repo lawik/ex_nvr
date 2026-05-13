@@ -81,7 +81,7 @@ defmodule ExNVR.Elements.VideoBuffererPipelineTest do
     # Broadcast event — VideoBufferer flushes buffer and starts forwarding.
     # The pipeline is already set up and data is flowing by the time
     # start_pipeline returns, so the bufferer has frames to flush.
-    Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:event, "recording_triggered"})
+    Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:trigger, "recording_triggered"})
 
     assert_end_of_stream(pid, :storage, :input, 10_000)
     Pipeline.terminate(pid)
@@ -97,7 +97,7 @@ defmodule ExNVR.Elements.VideoBuffererPipelineTest do
     pid = start_pipeline(device, topic, event_timeout: 200)
 
     # Start forwarding
-    Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:event, "recording_triggered"})
+    Phoenix.PubSub.broadcast(ExNVR.PubSub, topic, {:trigger, "recording_triggered"})
 
     # Let some frames through, then let the timeout fire.
     # The timeout sends Discontinuity → Storage closes the current segment.

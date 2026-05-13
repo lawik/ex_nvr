@@ -58,6 +58,35 @@ config :bundlex, :disable_precompiled_os_deps, apps: [:ex_libsrtp]
 
 config :exqlite, force_build: true
 
+case :os.type() do
+  {:unix, :darwin} ->
+    config :nx, :default_backend, {EMLX.Backend, device: :gpu}
+
+    config :ex_nvr, :inference,
+      onnx_execution_providers: [:coreml],
+      model_path: "./yolo11n.onnx",
+      classes_path: "./coco_classes.json"
+
+    config :ortex, Ortex.Native, features: [:coreml]
+
+  _ ->
+    config :nx, :default_backend, EXLA.Backend
+
+    config :ex_nvr, :inference,
+      onnx_execution_providers: [],
+      model_path: "./yolo11n.onnx",
+      classes_path: "./coco_classes.json"
+
+    config :ortex, Ortex.Native, features: []
+end
+
+config :exla,
+  clients: [host: [platform: :host]],
+  preferred_clients: [:host],
+  default_client: :host
+
+config :nx, :default_defn_options, compiler: EXLA
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

@@ -83,12 +83,14 @@ defmodule ExNVR.Triggers.Targets.TriggerRecording do
     target_config_id = Keyword.fetch!(opts, :target_config_id)
     device_id = Keyword.fetch!(opts, :device_id)
 
-    Logger.info("Trigger: signaling video bufferer #{target_config_id} for device #{device_id}")
+    Logger.info(
+      "Trigger: signaling video bufferer #{target_config_id} for device #{device_id}"
+    )
 
     Phoenix.PubSub.broadcast(
       ExNVR.PubSub,
       topic(target_config_id),
-      {:event, "recording_triggered"}
+      {:trigger, "recording_triggered"}
     )
   end
 

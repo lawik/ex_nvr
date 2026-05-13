@@ -84,6 +84,7 @@ defmodule ExNVR.MixProject do
       {:ex_onvif, "~> 0.9.0"},
       {:slipstream, "~> 1.2.0"},
       {:live_vue, "~> 0.5.7"},
+      {:yolo, "~> 0.2.0"},
       {:sentry, "~> 11.0"},
       {:live_debugger, "~> 0.3.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -92,7 +93,29 @@ defmodule ExNVR.MixProject do
       {:mimic, "~> 2.1", only: :test},
       {:faker, "~> 0.17", only: :test},
       {:bypass, "~> 2.1", only: :test},
-      {:lazy_html, "~> 0.1.0", only: :test}
+      {:lazy_html, "~> 0.1.0", only: :test},
+      # Nx is mostly used for pre/post processing
+    ] ++ inference_deps(Mix.target(), :os.type())
+  end
+
+  @exla_version "~> 0.10"
+  defp inference_deps(:host, {:unix, :darwin}) do
+    [
+        {:exla, @exla_version},
+        {:emlx, github: "elixir-nx/emlx", branch: "main"}
+    ]
+  end
+
+  defp inference_deps(:host, _) do
+    [
+        {:exla, @exla_version}
+    ]
+  end
+
+  # Exclude exla from embedded builds
+  defp inference_deps(target, _) when target in [:rpi4, :rpi5] do
+    [
+      {:hailo, github: "underjord/hailo"}
     ]
   end
 

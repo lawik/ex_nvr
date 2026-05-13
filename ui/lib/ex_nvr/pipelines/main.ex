@@ -40,7 +40,7 @@ defmodule ExNVR.Pipelines.Main do
   require Membrane.Logger
 
   alias __MODULE__.State
-  alias ExNVR.{Devices, Recordings, Utils}
+  alias ExNVR.{Devices, Inference, Recordings, Utils}
   alias ExNVR.Elements.{VideoBufferer, VideoStreamStatReporter}
   alias ExNVR.Model.Device
   alias ExNVR.Pipeline.{Output, Source, StorageMonitor}
@@ -301,7 +301,11 @@ defmodule ExNVR.Pipelines.Main do
 
     actions =
       Map.keys(ctx.children)
-      |> Enum.filter(&Enum.member?(static_children, &1))
+      |> Enum.filter(fn
+        {:video_bufferer, _id} -> true
+        {:storage, {:on_event, _id}} -> true
+        child -> Enum.member?(static_children, child)
+      end)
       |> then(&[remove_children: &1])
 
     {actions, state}
@@ -475,7 +479,7 @@ defmodule ExNVR.Pipelines.Main do
         |> via_out(:push_output)
         |> via_in(:video)
         |> child(:webrtc, %Output.WebRTC{ice_servers: state.ice_servers})
-      ]
+      ] ++ build_inference_specs(state)
   end
 
   # Create VideoBufferer → Storage chains at stream start.
@@ -504,6 +508,24 @@ defmodule ExNVR.Pipelines.Main do
     else
       []
     end
+  end
+
+  defp build_inference_specs(%{device: device}) do
+    pipelines = Inference.inference_pipelines_for_device(device.id)
+
+    Enum.flat_map(pipelines, fn pipeline ->
+      type =
+        if is_atom(pipeline.type), do: pipeline.type, else: String.to_existing_atom(pipeline.type)
+
+      module = ExNVR.Inference.InferencePipelines.module_for(type)
+
+      if module do
+        module.build_spec(device.id, pipeline.config, pipeline.id)
+      else
+        Membrane.Logger.warning("Unknown inference pipeline type: #{pipeline.type}")
+        []
+      end
+    end)
   end
 
   defp build_sub_stream_spec(%{device: device} = state) do
