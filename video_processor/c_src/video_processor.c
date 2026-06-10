@@ -74,6 +74,9 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       goto clean;
     }
 
+    enif_free(config_name);
+    config_name = NULL;
+
     enif_map_iterator_next(env, &iter);
   }
 
@@ -117,6 +120,7 @@ ERL_NIF_TERM new_encoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   nvr_encoder->frame = av_frame_alloc();
 
   if (encoder_init(nvr_encoder->encoder, &encoder_config) < 0) {
+    enif_release_resource(nvr_encoder);
     ret = nif_raise(env, "failed_to_init_encoder");
     goto clean;
   }
@@ -203,6 +207,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   nvr_decoder->pad = pad;
 
   if (decoder_init(nvr_decoder->decoder, codec) < 0) {
+    enif_release_resource(nvr_decoder);
     ret = nif_raise(env, "failed_to_init_decoder");
     goto clean;
   }
@@ -280,6 +285,7 @@ ERL_NIF_TERM new_converter(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
   if (video_converter_init(nvr_converter->video_converter, in_width, in_height,
                            in_pix_fmt, out_width, out_height, out_pix_fmt,
                            pad) < 0) {
+    enif_release_resource(nvr_converter);
     ret = nif_raise(env, "failed_to_init_converter");
     goto clean;
   }
