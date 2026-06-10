@@ -332,6 +332,10 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return nif_raise(env, "failed_to_fill_arrays");
   }
 
+  if ((size_t)ret > input.size) {
+    return nif_raise(env, "invalid_input_size");
+  }
+
   if (encoder_encode(nvr_encoder->encoder, frame) < 0) {
     return nif_raise(env, "failed_to_encode");
   }
@@ -408,6 +412,10 @@ ERL_NIF_TERM convert(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
                              frame->format, frame->width, frame->height, 1);
   if (ret < 0) {
     return nif_raise(env, "failed_to_fill_arrays");
+  }
+
+  if ((size_t)ret > input.size) {
+    return nif_raise(env, "invalid_input_size");
   }
 
   ret = video_converter_convert(nvr_converter->video_converter, frame);
