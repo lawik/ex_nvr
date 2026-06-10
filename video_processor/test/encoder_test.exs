@@ -78,6 +78,24 @@ defmodule ExNVR.AV.EncoderTest do
       assert Enum.all?(packets, & &1.keyframe?)
     end
 
+    test "raises when frame data is smaller than the configured dimensions require", %{
+      frame: frame
+    } do
+      encoder =
+        Encoder.new(:h264,
+          width: 360,
+          height: 240,
+          format: :yuv420p,
+          time_base: {1, 25}
+        )
+
+      too_small_frame = %{frame | data: binary_part(frame.data, 0, 100)}
+
+      assert_raise ErlangError, ~r/invalid_input_size/, fn ->
+        Encoder.encode(encoder, too_small_frame)
+      end
+    end
+
     test "no bframes inserted", %{frame: frame} do
       encoder =
         Encoder.new(:h264,

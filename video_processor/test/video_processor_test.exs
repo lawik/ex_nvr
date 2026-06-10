@@ -44,6 +44,19 @@ defmodule ExNVR.AV.VideoProcessorTest do
       assert byte_size(converted_data) == 180 * 120 * 3
     end
 
+    test "raises when input data is smaller than the configured dimensions require", %{
+      data: data,
+      options: options
+    } do
+      converter = VideoProcessor.new_converter(options)
+
+      too_small_data = binary_part(data, 0, 100)
+
+      assert_raise ErlangError, ~r/invalid_input_size/, fn ->
+        VideoProcessor.convert(converter, too_small_data)
+      end
+    end
+
     test "convert and pad a frame", %{data: data, options: options} do
       converter =
         VideoProcessor.new_converter(Keyword.merge(options, pad?: true, out_height: 180))
