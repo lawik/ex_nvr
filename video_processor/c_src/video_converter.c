@@ -68,6 +68,21 @@ int video_converter_init(VideoConverter *converter, int in_width, int in_height,
       if (ret < 0) {
         return ret;
       }
+
+      // av_frame_get_buffer() does not zero the buffer. Fill the frame with
+      // black so the padding regions are deterministic instead of leaking
+      // uninitialized memory.
+      ptrdiff_t linesizes[4];
+      for (int i = 0; i < 4; i++) {
+        linesizes[i] = dst_frame->linesize[i];
+      }
+
+      ret = av_image_fill_black(dst_frame->data, linesizes, dst_frame->format,
+                                AVCOL_RANGE_JPEG, dst_frame->width,
+                                dst_frame->height);
+      if (ret < 0) {
+        return ret;
+      }
     }
   }
 
@@ -131,19 +146,33 @@ void video_converter_free(struct VideoConverter **converter) {
 }
 
 int add_padding(AVFrame *scaled_frame, AVFrame *dst_frame) {
+  // number of bytes occupied by the scaled image pixels in one row, which may
+  // be smaller than its linesize because of alignment padding
+  int bytewidth =
+      av_image_get_linesize(scaled_frame->format, scaled_frame->width, 0);
+  if (bytewidth < 0) {
+    return bytewidth;
+  }
+
   if (scaled_frame->width == dst_frame->width) {
     int top = (dst_frame->height - scaled_frame->height) / 2;
-    int src_stride = dst_frame->linesize[0];
+    int dst_stride = dst_frame->linesize[0];
 
-    av_image_copy_plane(dst_frame->data[0] + top * src_stride, src_stride,
-                        scaled_frame->data[0], scaled_frame->linesize[0], src_stride,
-                        scaled_frame->height);
+    av_image_copy_plane(dst_frame->data[0] + top * dst_stride, dst_stride,
+                        scaled_frame->data[0], scaled_frame->linesize[0],
+                        bytewidth, scaled_frame->height);
   } else {
     int left = (dst_frame->width - scaled_frame->width) / 2;
+    // byte offset of the `left` pixel column in the destination row
+    int left_offset = av_image_get_linesize(dst_frame->format, left, 0);
+    if (left_offset < 0) {
+      return left_offset;
+    }
 
-    av_image_copy_plane(dst_frame->data[0] + left, dst_frame->linesize[0],
-                        scaled_frame->data[0], scaled_frame->linesize[0],
-                        scaled_frame->linesize[0], scaled_frame->height);
+    av_image_copy_plane(dst_frame->data[0] + left_offset,
+                        dst_frame->linesize[0], scaled_frame->data[0],
+                        scaled_frame->linesize[0], bytewidth,
+                        scaled_frame->height);
   }
 
   return 0;
