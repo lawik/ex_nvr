@@ -2,10 +2,11 @@ defmodule ExNVR.AV.DecoderTest do
   use ExUnit.Case, async: true
 
   alias ExNVR.AV.{Decoder, Frame}
-  alias ExNVR.AV.VideoProcessor.NIF
 
   @h264_frame File.read!("test/fixtures/decoder/sample.h264")
   @h265_frame File.read!("test/fixtures/decoder/sample.h265")
+
+  alias ExNVR.AV.VideoProcessor.NIF
 
   test "new/0" do
     assert decoder = Decoder.new(:h264)
