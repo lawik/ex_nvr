@@ -19,7 +19,7 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
   @impl true
   def init(_opts) do
     Logger.info("Starting power schedule monitoring")
-    Process.send_after(self(), :check_schedule, to_timeout(minute: 5))
+    schedule_next_check(to_timeout(minute: 5))
     SystemSettings.subscribe()
     {:ok, get_settings()}
   end
@@ -30,17 +30,23 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
 
     cond do
       is_nil(state.schedule) ->
-        Process.send_after(self(), :check_schedule, to_timeout(minute: 5))
+        schedule_next_check(to_timeout(minute: 5))
 
       not ntp_synced? or Schedule.scheduled?(state.schedule, DateTime.now!(state.timezone)) ->
         if not ntp_synced? do
           Logger.warning("[Power schedule]: NTP not synched, skipping schedule check")
         end
 
-        Process.send_after(self(), :check_schedule, to_timeout(second: 15))
+        schedule_next_check(to_timeout(second: 15))
 
       true ->
         trigger_action(state.action)
+
+        # `:power_off` shuts the device down, for the other actions
+        # the timer must be re-armed to keep the schedule alive.
+        if state.action != :power_off do
+          schedule_next_check(to_timeout(minute: 5))
+        end
     end
 
     {:noreply, state}
@@ -63,8 +69,15 @@ defmodule ExNVR.Nerves.Monitoring.PowerSchedule do
     stop_recording()
   end
 
+  defp trigger_action(:nothing), do: :ok
+
   defp trigger_action(action) do
     Logger.warning("[Power schedule]: unknown action #{inspect(action)}")
+  end
+
+  defp schedule_next_check(interval) do
+    interval = Application.get_env(:ex_nvr_fw, :power_schedule_check_interval, interval)
+    Process.send_after(self(), :check_schedule, interval)
   end
 
   defp get_settings do
